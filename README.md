@@ -11,13 +11,13 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Raíz de diag sirve html, pero si detecta cli, acepta http y refleja IP (equivalente a `/ip`).
 - [x] https forzado para todos los demás accesos.
 - [ ] implementar mmdb para datos de IP (front solo pide IPv4 detail).
+- [ ] Rate limit para todos los endpoints (FastAPI con slowapi).
+- [ ] DualSocket (viene dictado por el proxy superior).
+- [ ] Asegurar CORS para los endpoints fuera de diag.
 - [ ] IPv4, IPv6 y diag comparten endpoints, el front decide solo pedir detalles a IPv4 por estabilidad.
 - [ ] Endpoints comunes: `/ip` -> refleja IP plana siempre, `/ip/detail` devuelve JSON con datos de mmdb, `/ip/full` devuelve todo lo anterior + UA y headers del cliente. `/ready` para declarar estado listo para recibir peticiones. Todos estos soportan http y https para cli.
 - [ ] Endpoints exclusivos de diag: `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
-- [ ] Asegurar CORS para los endpoints fuera de diag.
 - [ ] Fallback ordenado ipv4 -> ipv6 (si falla ipv4, pide full de ipv6)
-- [ ] DualSocket (viene dictado por el proxy superior).
-- [ ] Rate limit para todos los endpoints (FastAPI con slowapi).
 - [ ] DNS Leak, solo responde a A y AAAA, rechaza cualquier otro formato, limitado por IP.
 - [ ] Redis de DNS Leak limitado a memoria 2M y solo 1 min de TTL.
 - [ ] RTT se mide en el cliente, depende del front.
