@@ -1,0 +1,12 @@
+.base/
+
+# deps / builds
+node_modules/
+web/dist/
+web/.astro/
+__pycache__/
+*.pyc
+.venv/
+uv.lock.tmp
+
+.env

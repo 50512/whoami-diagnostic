@@ -1,0 +1,40 @@
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    container_name: whoami-caddy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_IP_BIND:-8080}:80"
+    environment:
+      - IPV4_HOST=${IPV4_HOST}
+      - IPV6_HOST=${IPV6_HOST}
+    volumes:
+      - ./docker/caddy:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    container_name: whoami-api-dev
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./api:/app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DNS_ZONE=${DNS_ZONE:-dns.whoami.local}
+      - IPV4_HOST=${IPV4_HOST}
+      - IPV6_HOST=${IPV6_HOST}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    container_name: whoami-redis-dev
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

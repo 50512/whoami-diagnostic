@@ -1,0 +1,35 @@
+{
+	servers {
+		# Necesario para evitar inyecciones de IP falsas y recibir la IP desde proxies inversos
+		trusted_proxies static 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
+:80 {
+	@api_paths {
+		path /ip /ip/* /dns-leak /dns-leak/*
+	}
+	handle @api_paths {
+		reverse_proxy whoami-api-dev:8000
+	}
+
+	@api_hosts {
+		host {env.IPV4_HOST} {env.IPV6_HOST}
+	}
+	handle @api_hosts {
+		reverse_proxy whoami-api-dev:8000
+	}
+
+	@cli_client expression `header_regexp('User-Agent', '(?i)(curl|wget|python|httpie|aria2)') || !header({'User-Agent': '*'})`
+	handle @cli_client {
+		reverse_proxy whoami-api-dev:8000
+	}
+
+	handle {
+		@insecure header X-Forwarded-Proto http
+		redir @insecure https://{host}{uri} permanent
+
+		respond "main web" 200
+	}
+}
