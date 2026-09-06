@@ -10,22 +10,22 @@
 	encode
 
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/*
+		path /ip /ip/* /dns-leak /dns-leak/* /ready
 	}
 	handle @api_paths {
-		reverse_proxy whoami-api-dev:8000
+		reverse_proxy whoami-api:8000
 	}
 
 	@api_hosts {
 		host {env.IPV4_HOST} {env.IPV6_HOST}
 	}
 	handle @api_hosts {
-		reverse_proxy whoami-api-dev:8000
+		reverse_proxy whoami-api:8000
 	}
 
 	@cli_client expression `header_regexp('User-Agent', '(?i)(curl|wget|python|httpie|aria2)') || !header({'User-Agent': '*'})`
 	handle @cli_client {
-		reverse_proxy whoami-api-dev:8000
+		reverse_proxy whoami-api:8000
 	}
 
 	handle {

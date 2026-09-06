@@ -47,3 +47,7 @@ async def enforce_https(request: Request, call_next):
 async def root_dispatcher(request: Request):
     client_ip = get_plain_ip(request)
     return PlainTextResponse(content=f"{client_ip}\n")
+
+@app.get("/ready")
+async def health_check(request: Request):
+    return PlainTextResponse(content="OK")

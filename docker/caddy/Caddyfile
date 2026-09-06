@@ -10,7 +10,7 @@
 	encode
 
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/*
+		path /ip /ip/* /dns-leak /dns-leak/* /ready
 	}
 	handle @api_paths {
 		reverse_proxy whoami-api-dev:8000
