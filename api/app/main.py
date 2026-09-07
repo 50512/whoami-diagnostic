@@ -15,9 +15,24 @@ IP_HOSTS = [
 GEOIP_PATH = os.environ.get("GEOIP_PATH", "/var/opt/GeoIP")
 CLI_REGEX = re.compile(r"(?i)(curl|wget|python|httpie|aria2)")
 
+ALLOWED_HEADERS = {
+    "user-agent", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
+    "accept-language", "accept", "accept-encoding",
+    "dnt", "sec-gpc", "forwarded", "x-forwarded-for", "x-client-xff"
+}
+
 
 def get_plain_ip(request: Request) -> str:
     return request.headers.get("x-forwarded-for", "127.0.0.1").split(",")[0]
+
+
+def get_headers(request: Request) -> dict[str, str]:
+    clean_headers = {
+        key:value for key, value in request.headers.items()
+        if key in ALLOWED_HEADERS
+    }
+
+    return clean_headers
 
 
 def _epoch_to_iso(epoch: int) -> str:
@@ -80,6 +95,7 @@ async def root_dispatcher(request: Request):
 
 
 @app.get("/ip/detail")
+@app.get("/ip/details")
 async def detail_dispatcher(request: Request):
     client_ip = get_plain_ip(request)
     manager = request.app.state.geoip
@@ -88,6 +104,27 @@ async def detail_dispatcher(request: Request):
         city_reader=manager.reader("city"),
         asn_reader=manager.reader("asn")
     )
+    return JSONResponse(content=data)
+
+
+@app.get("/client/headers")
+async def headers_dispatcher(request: Request):
+    return JSONResponse(content={
+        "headers": get_headers(request)
+    })
+
+
+@app.get("/client/all")
+@app.get("/ip/all")
+async def all_data(request: Request):
+    client_ip = get_plain_ip(request)
+    manager = request.app.state.geoip
+    data = get_json_mmdb(
+        client_ip,
+        city_reader=manager.reader("city"),
+        asn_reader=manager.reader("asn")
+    )
+    data["headers"] = get_headers(request)
     return JSONResponse(content=data)
 
 
@@ -112,8 +149,8 @@ async def info(request: Request):
 async def health_check(request: Request):
     manager = getattr(request.app.state, "geoip", None)
     try:
-        asn = manager.reader("asn")
-        city = manager.reader("city")
+        manager.reader("asn")
+        manager.reader("city")
     except (AttributeError, RuntimeError):
         return JSONResponse({"status": "NOT READY"}, status_code=503)
     return JSONResponse({"status": "OK"})

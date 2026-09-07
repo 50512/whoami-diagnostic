@@ -7,6 +7,7 @@
 }
 (to_api) {
 	reverse_proxy whoami-api:8000 {
+		header_up X-Client-XFF {http.request.header.X-Forwarded-For}
 		header_up X-Forwarded-For {client_ip}
 	}
 }
@@ -15,7 +16,7 @@
 	encode
 
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/* /ready /info
+		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /ready /info
 	}
 	handle @api_paths {
 		import to_api
