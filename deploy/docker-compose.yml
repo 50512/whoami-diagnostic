@@ -1,0 +1,69 @@
+services:
+  web:
+    image: ghcr.io/50512/whoami-web:${IMAGE_TAG:-latest}
+    container_name: whoami-diag
+    restart: unless-stopped
+    environment:
+      - IPV4_HOST=${IPV4_HOST}
+      - IPV6_HOST=${IPV6_HOST}
+    depends_on:
+      - api
+    networks:
+      - admin_public_network
+      - default
+
+  api:
+    image: ghcr.io/50512/whoami-api:${IMAGE_TAG:-latest}
+    container_name: whoami-api
+    restart: unless-stopped
+    volumes:
+      - geoip_data:/var/opt/GeoIP
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DNS_ZONE=${DNS_ZONE}
+      - IPV4_HOST=${IPV4_HOST}
+      - IPV6_HOST=${IPV6_HOST}
+      - GEOIP_PATH=/var/opt/GeoIP
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - redis
+      - geoipupdate
+
+  geoipupdate:
+    image: ghcr.io/maxmind/geoipupdate:latest
+    container_name: whoami-geoip-updater
+    restart: unless-stopped
+    volumes:
+      - geoip_data:/var/opt/GeoIP
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+      - GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - GEOIPUPDATE_EDITION_IDS=GeoLite2-City GeoLite2-ASN
+      - GEOIPUPDATE_DB_DIR=/var/opt/GeoIP
+      - GEOIPUPDATE_FRECUENCY=72
+
+  redis:
+    image: redis:7-alpine
+    container_name: whoami-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+
+networks:
+  admin_public_network:
+    external: true
+
+volumes:
+  redis_data:
+  geoip_data:
