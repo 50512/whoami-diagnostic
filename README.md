@@ -10,7 +10,7 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] No redirigir a https herramientas cli o endpoint `/ip` (no siguen las re-direcciones por defecto).
 - [x] Raíz de diag sirve html, pero si detecta cli, acepta http y refleja IP (equivalente a `/ip`).
 - [x] https forzado para todos los demás accesos.
-- [ ] implementar mmdb para datos de IP (front solo pide IPv4 detail).
+- [x] implementar mmdb para datos de IP (front solo pide IPv4 detail).
 - [ ] Rate limit para todos los endpoints (FastAPI con slowapi).
 - [ ] DualSocket (viene dictado por el proxy superior).
 - [ ] Asegurar CORS para los endpoints fuera de diag.

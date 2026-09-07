@@ -1,11 +1,12 @@
 [project]
 name = "whoami-api"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "redis>=5.2",
+    "geoip2>=5.3",
 ]
 
 [tool.uv]

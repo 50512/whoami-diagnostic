@@ -5,6 +5,11 @@
 		client_ip_headers CF-Connecting-IP X-Forwarded-For
 	}
 }
+(to_api) {
+	reverse_proxy whoami-api-dev:8000 {
+		header_up X-Forwarded-For {client_ip}
+	}
+}
 
 :80 {
 	encode
@@ -13,19 +18,19 @@
 		path /ip /ip/* /dns-leak /dns-leak/* /ready
 	}
 	handle @api_paths {
-		reverse_proxy whoami-api-dev:8000
+		import to_api
 	}
 
 	@api_hosts {
 		host {env.IPV4_HOST} {env.IPV6_HOST}
 	}
 	handle @api_hosts {
-		reverse_proxy whoami-api-dev:8000
+		import to_api
 	}
 
 	@cli_client expression `header_regexp('User-Agent', '(?i)(curl|wget|python|httpie|aria2)') || !header({'User-Agent': '*'})`
 	handle @cli_client {
-		reverse_proxy whoami-api-dev:8000
+		import to_api
 	}
 
 	handle {

@@ -1,0 +1,35 @@
+# Para desarrollo, se usa 
+FROM ghcr.io/maxmind/geoipupdate:latest AS downloader
+
+# Recibimos las credenciales como argumentos de compilación
+ARG MAXMIND_ACCOUNT_ID
+ARG MAXMIND_LICENSE_KEY
+
+ENV GEOIPUPDATE_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+ENV GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+ENV GEOIPUPDATE_EDITION_IDS="GeoLite2-City GeoLite2-ASN"
+
+# Ejecutamos el actualizador una sola vez (sin cron) para obtener los .mmdb
+RUN mkdir -p /var/opt/GeoIP && /usr/bin/geoipupdate -v -d /var/opt/GeoIP
+
+FROM python:3.14-slim
+LABEL org.opencontainers.image.source="https://github.com/50512/whoami-diagnostic"
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    UV_COMPILE_BYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+RUN uv sync
+COPY --from=downloader /var/opt/GeoIP /var/opt/GeoIP
+COPY . .
+
+ENV GEOIP_PATH=/var/opt/GeoIP
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
