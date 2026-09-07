@@ -15,7 +15,7 @@
 	encode
 
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/* /ready
+		path /ip /ip/* /dns-leak /dns-leak/* /ready /info
 	}
 	handle @api_paths {
 		import to_api

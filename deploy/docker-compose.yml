@@ -50,7 +50,7 @@ services:
       - GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
       - GEOIPUPDATE_EDITION_IDS=GeoLite2-City GeoLite2-ASN
       - GEOIPUPDATE_DB_DIR=/var/opt/GeoIP
-      - GEOIPUPDATE_FRECUENCY=72
+      - GEOIPUPDATE_FREQUENCY=72
 
   redis:
     image: redis:7-alpine
