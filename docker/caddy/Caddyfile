@@ -2,7 +2,7 @@
 	servers {
 		# Necesario para evitar inyecciones de IP falsas y recibir la IP desde proxies inversos
 		trusted_proxies static 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-		client_ip_headers CF-Connecting-IP X-Forwarded-For
+		client_ip_headers X-Forwarded-For
 	}
 }
 (to_api) {
