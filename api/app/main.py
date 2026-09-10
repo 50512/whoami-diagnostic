@@ -17,8 +17,7 @@ CLI_REGEX = re.compile(r"(?i)(curl|wget|python|httpie|aria2)")
 
 ALLOWED_HEADERS = {
     "user-agent", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
-    "accept-language", "accept", "accept-encoding",
-    "dnt", "sec-gpc", "forwarded", "x-forwarded-for", "x-client-xff"
+    "accept-language", "accept", "accept-encoding", "dnt", "sec-gpc", "forwarded"
 }
 
 
