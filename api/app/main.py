@@ -12,6 +12,7 @@ from app.lib.ip_addr_utils import is_valid_ip
 from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
 
 IP_HOSTS = [os.environ.get("IPV4_HOST"), os.environ.get("IPV6_HOST")]
+EXCLUDED_MIDDLEWARE_PATHS = ["/ready", "/info"]
 
 GEOIP_PATH = os.environ.get("GEOIP_PATH", "/var/opt/GeoIP")
 CLI_REGEX = re.compile(r"(?i)(curl|wget|python|httpie|aria2)")
@@ -91,6 +92,9 @@ async def enforce_https(request: Request, call_next):
     user_agent = request.headers.get("user-agent", "")
     forwarded_proto = request.headers.get("x-forwarded-proto", "http")
     host = request.headers.get("host", "")
+
+    if request.url.path in EXCLUDED_MIDDLEWARE_PATHS:
+        return await call_next(request)
 
     if not is_valid_ip(get_plain_ip(request)):
         return JSONResponse(
