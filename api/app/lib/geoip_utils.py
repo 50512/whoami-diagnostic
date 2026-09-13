@@ -1,19 +1,30 @@
 import asyncio
-import os
 import logging
+import os
 from dataclasses import dataclass
 
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
 from maxminddb import MODE_MEMORY
 
+from app.lib.ip_addr_utils import is_valid_ip
+
 log = logging.getLogger("geoip")
+
+MMDB_ATTRIBUTIONS = {
+    "maxmind": {
+        "source": "maxmind-geolite2",
+        "text": "This product includes GeoLite2 Data created by MaxMind, available from https://www.maxmind.com.",
+        "url": "https://www.maxmind.com",
+    }
+}
+
 
 @dataclass
 class _Entry:
     path: str
     reader: geoip2.database.Reader | None = None
-    sign: tuple | None = None # Firma (inode, mtime, size)
+    sign: tuple | None = None  # Firma (inode, mtime, size)
 
 
 def _stat_sign(path: str) -> tuple | None:
@@ -32,9 +43,8 @@ class GeoIPManager:
     def __init__(self, paths: dict[str, str], poll_interval: float = 30.0):
         self._entries = {name: _Entry(path) for name, path in paths.items()}
         self._poll_interval = poll_interval
-        self._lock = asyncio.Lock() # Solo para recarga
+        self._lock = asyncio.Lock()  # Solo para recarga
         self._task: asyncio.Task | None = None
-
 
     # --------- Reader ---------
     def reader(self, name: str) -> geoip2.database.Reader:
@@ -43,9 +53,8 @@ class GeoIPManager:
             raise RuntimeError(f"geoip db '{name}' no cargada")
         return reader
 
-
     # --------- Recarga en caliente ---------
-    async def _reload(self, name:str) -> None:
+    async def _reload(self, name: str) -> None:
         entry = self._entries[name]
         sign = _stat_sign(entry.path)
 
@@ -55,7 +64,9 @@ class GeoIPManager:
         try:
             new = await asyncio.to_thread(_open, entry.path)
         except Exception:
-            log.exception(f"geoip: fallo abriendo {entry.path}; Se conserva el reader anterior")
+            log.exception(
+                f"geoip: fallo abriendo {entry.path}; Se conserva el reader anterior"
+            )
             return
 
         old = entry.reader
@@ -66,12 +77,10 @@ class GeoIPManager:
             old.close()
         log.info(f"geoip: '{name}' recargada (build={new.metadata().build_epoch})")
 
-
     async def load_all(self) -> None:
         async with self._lock:
             for name in self._entries:
                 await self._reload(name)
-
 
     async def _poll(self) -> None:
         while True:
@@ -80,11 +89,9 @@ class GeoIPManager:
                 for name in self._entries:
                     await self._reload(name)
 
-
     async def start(self) -> None:
         await self.load_all()
         self._task = asyncio.create_task(self._poll())
-
 
     async def stop(self) -> None:
         if self._task:
@@ -99,20 +106,15 @@ class GeoIPManager:
 
 
 def get_json_mmdb(
-        ip: str,
-        asn_reader: geoip2.database.Reader,
-        city_reader: geoip2.database.Reader
-    ) -> dict:
+    ip: str, asn_reader: geoip2.database.Reader, city_reader: geoip2.database.Reader
+) -> dict:
     res = {
         "ip": ip,
         "asn": None,
         "asn_org": None,
         "cidr": None,
         "geolocation": {
-            "country": {
-                "name": None,
-                "iso_code": None
-            },
+            "country": {"name": None, "iso_code": None},
             "region": None,
             "city": None,
             "continent_code": None,
@@ -122,9 +124,13 @@ def get_json_mmdb(
             "latitude": None,
             "longitude": None,
             "accuracy_radius": None,
-            "timezone": None
+            "timezone": None,
         },
+        "attributions": None,
     }
+
+    if not is_valid_ip(ip):
+        return res
 
     # --------- Consulta ASN ---------
     try:
@@ -133,10 +139,9 @@ def get_json_mmdb(
         res["asn_org"] = asn.autonomous_system_organization
         if asn.network is not None:
             res["cidr"] = str(asn.network)
+        res["attributions"] = MMDB_ATTRIBUTIONS
     except AddressNotFoundError:
         pass
-    except ValueError:
-        return res
 
     # --------- Consulta Geo ---------
     try:
@@ -154,6 +159,8 @@ def get_json_mmdb(
         loc["longitude"] = city.location.longitude
         loc["accuracy_radius"] = city.location.accuracy_radius
         loc["timezone"] = city.location.time_zone
+
+        res["attributions"] = MMDB_ATTRIBUTIONS
     except AddressNotFoundError:
         pass
 

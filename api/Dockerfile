@@ -6,12 +6,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH=/opt/venv/bin:$PATH \
     UV_COMPILE_BYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-RUN uv sync
+COPY uv.lock pyproject.toml ./
+RUN uv sync --no-dev --frozen
 COPY . .
 
 EXPOSE 8000
