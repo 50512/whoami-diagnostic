@@ -16,10 +16,13 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Endpoints comunes: `/ip` -> refleja IP plana siempre, `/ip/detail` devuelve JSON con datos de mmdb, `/ip/full` devuelve todo lo anterior + UA y headers del cliente. `/ready` para declarar estado listo para recibir peticiones. Todos estos soportan http y https para cli.
 - [x] 400 en IP privada
 - [x] Rate limit para todos los endpoints ~~(FastAPI con slowapi)~~ de la API a nivel de _reverse proxy_.
-- [ ] Asegurar CORS para los endpoints fuera de diag.
-- [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
-- [ ] Endpoints exclusivos de diag: `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
-- [ ] Fallback ordenado ipv4 -> ipv6 (si falla ipv4, pide full de ipv6)
+- [x] Asegurar CORS para los endpoints fuera de diag.
+- [x] Caché efímera en los endpoints API. Caché estática para el front estático
+- [ ] `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
 - [ ] DNS Leak, solo responde a A y AAAA, rechaza cualquier otro formato, limitado por IP.
 - [ ] Redis de DNS Leak limitado a memoria 2M y solo 1 min de TTL.
-- [ ] RTT se mide en el cliente, depende del front.
+- [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
+- [ ] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
+- [ ] Front pide headers por `diag.50512.dev/client/headers`.
+- [ ] Front muestra en grande IPv4, de no existir, se reemplaza por IPv6.
+- [ ] RTT se mide en el cliente, depende del front. Se mide para cada petición (`ipv4`, `ipv6`, `diag/headers`)

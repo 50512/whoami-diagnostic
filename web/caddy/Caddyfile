@@ -5,6 +5,26 @@
 		client_ip_headers X-Forwarded-For
 	}
 }
+(cors_headers) {
+	header Access-Control-Allow-Origin "https://{env.MAIN_HOST}"
+	header Access-Control-Allow-Methods "GET, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type"
+}
+(cache_dynamic) {
+	header Cache-Control "no-cache, no-store, must-revalidate"
+	header CDN-Cache-Control "no-cache, no-store, must-revalidate"
+	header Pragma "no-cache"
+	header Expires "0"
+}
+(cache_file_server) {
+	@assets_immutable path_regexp \.(?i:css|js|mjs|map|woff2?|ttf|otf|eot|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mp3|ogg|wasm)$
+	header @assets_immutable Cache-Control "public, max-age=31536000, immutable"
+	header @assets_immutable CDN-Cache-Control "public, max-age=31536000, immutable"
+
+	@documents not path_regexp \.(?i:css|js|mjs|map|woff2?|ttf|otf|eot|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mp3|ogg|wasm)$
+	header @documents Cache-Control "public, max-age=300, must-revalidate"
+	header @documents CDN-Cache-Control "public, max-age=300, must-revalidate"
+}
 (to_api) {
 	@limit not path /ready /info
 	rate_limit @limit {
@@ -14,6 +34,8 @@
 			window 1m
 		}
 	}
+	import cors_headers
+	import cache_dynamic
 	reverse_proxy api:8000 {
 		header_up X-Forwarded-For {client_ip}
 	}
@@ -45,6 +67,7 @@
 		@insecure header X-Forwarded-Proto http
 		redir @insecure https://{host}{uri} permanent
 
+		import cache_file_server
 		respond "main web" 200
 	}
 }
