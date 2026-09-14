@@ -18,6 +18,7 @@ services:
     restart: unless-stopped
     volumes:
       - geoip_data:/var/opt/GeoIP
+      - whoami_data:/data
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DNS_ZONE=${DNS_ZONE}
@@ -67,3 +68,4 @@ networks:
 volumes:
   redis_data:
   geoip_data:
+  whoami_data:
