@@ -6,7 +6,15 @@
 	}
 }
 (to_api) {
-	reverse_proxy whoami-api-dev:8000 {
+	@limit not path /ready /info
+	rate_limit @limit {
+		zone by_ip {
+			key {client_ip}
+			events 60
+			window 1m
+		}
+	}
+	reverse_proxy api:8000 {
 		header_up X-Forwarded-For {client_ip}
 	}
 }

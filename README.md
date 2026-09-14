@@ -15,8 +15,8 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] IPv4, IPv6 y diag comparten endpoints, el front decide solo pedir detalles a IPv4 por estabilidad.
 - [x] Endpoints comunes: `/ip` -> refleja IP plana siempre, `/ip/detail` devuelve JSON con datos de mmdb, `/ip/full` devuelve todo lo anterior + UA y headers del cliente. `/ready` para declarar estado listo para recibir peticiones. Todos estos soportan http y https para cli.
 - [x] 400 en IP privada
+- [x] Rate limit para todos los endpoints ~~(FastAPI con slowapi)~~ de la API a nivel de _reverse proxy_.
 - [ ] Asegurar CORS para los endpoints fuera de diag.
-- [ ] Rate limit para todos los endpoints (FastAPI con slowapi).
 - [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
 - [ ] Endpoints exclusivos de diag: `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
 - [ ] Fallback ordenado ipv4 -> ipv6 (si falla ipv4, pide full de ipv6)
