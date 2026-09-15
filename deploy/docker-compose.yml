@@ -26,6 +26,7 @@ services:
       - IPV4_HOST=${IPV4_HOST}
       - IPV6_HOST=${IPV6_HOST}
       - GEOIP_PATH=/var/opt/GeoIP
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     healthcheck:
       test:
         [
@@ -50,6 +51,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - DNS_ZONE=${DNS_ZONE:-dns-leak.host.com}
       - DNS_PORT=53 # dentro del contenedor escucha en 53
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - redis
 
