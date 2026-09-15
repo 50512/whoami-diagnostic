@@ -5,27 +5,35 @@
 		client_ip_headers X-Forwarded-For
 	}
 }
+
 (cors_headers) {
+	# Para permitir la detección y medición desde el frontend
 	header Access-Control-Allow-Origin "https://{env.MAIN_HOST}"
 	header Access-Control-Allow-Methods "GET, OPTIONS"
 	header Access-Control-Allow-Headers "Content-Type"
 	header Timing-Allow-Origin "https://{env.MAIN_HOST}"
 }
+
 (cache_dynamic) {
+	# Evitar caché a toda costa
 	header Cache-Control "no-cache, no-store, must-revalidate"
 	header CDN-Cache-Control "no-cache, no-store, must-revalidate"
 	header Pragma "no-cache"
 	header Expires "0"
 }
+
 (cache_file_server) {
+	# Inmutable para archivos estáticos/assets, se recargan por hash/timestamp
 	@assets_immutable path_regexp \.(?i:css|js|mjs|map|woff2?|ttf|otf|eot|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mp3|ogg|wasm)$
 	header @assets_immutable Cache-Control "public, max-age=31536000, immutable"
 	header @assets_immutable CDN-Cache-Control "public, max-age=31536000, immutable"
 
+	# Todo lo que no son assets se guarda por 5 minutos
 	@documents not path_regexp \.(?i:css|js|mjs|map|woff2?|ttf|otf|eot|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mp3|ogg|wasm)$
 	header @documents Cache-Control "public, max-age=300, must-revalidate"
 	header @documents CDN-Cache-Control "public, max-age=300, must-revalidate"
 }
+
 (to_api) {
 	@limit not path /ready /info
 	rate_limit @limit {
@@ -45,6 +53,7 @@
 :80 {
 	encode
 
+	# Rutas de API
 	@api_paths {
 		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /ready /info /all
 	}
@@ -52,6 +61,7 @@
 		import to_api
 	}
 
+	# Hosts ipv4 e ipv6 van directo a la API
 	@api_hosts {
 		host {env.IPV4_HOST} {env.IPV6_HOST}
 	}
@@ -59,11 +69,13 @@
 		import to_api
 	}
 
+  # User-Agent correspondiente a herramientas cli no fuerza https y manda directo a la API
 	@cli_client expression `header_regexp('User-Agent', '(?i)(curl|wget|python|httpie|aria2)') || !header({'User-Agent': '*'})`
 	handle @cli_client {
 		import to_api
 	}
 
+	# Todo lo demás cae a file_server estático
 	handle {
 		@insecure header X-Forwarded-Proto http
 		redir @insecure https://{host}{uri} permanent

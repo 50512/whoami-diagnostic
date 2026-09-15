@@ -172,7 +172,7 @@ async def dns_leak(test_id: str, request: Request):
     try:
         ips = await redis.smembers(f"{LEAK_KEY_PREFIX}{test_id}")
     except Exception as e:
-        log.error(f"fastapi: Error al consultar redis: {e}")
+        log.exception(f"fastapi: Error al consultar redis: {e}")
         return JSONResponse(
             {"error": "dns leak unavailable"},
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

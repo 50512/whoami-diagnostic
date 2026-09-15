@@ -32,6 +32,7 @@ services:
       - DNS_ZONE=${DNS_ZONE:-dns.whoami.local}
       - IPV4_HOST=${IPV4_HOST}
       - IPV6_HOST=${IPV6_HOST}
+      - LOG_LEVEL=${LOG_LEVEL}
     depends_on:
       - redis
 
@@ -41,12 +42,13 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     ports:
-      - "${DNS_PORT:-5353}:53/udp" # host 5353 → contenedor 53/udp
+      - "${DNS_PORT:-5353}:53/udp" # host 5353 -> contenedor 53/udp
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DNS_ZONE=${DNS_ZONE:-dns-leak.host.com}
       - ANSWER_IP=${ANSWER_IP:-127.0.0.1}
       - DNS_PORT=53 # dentro del contenedor escucha en 53
+      - LOG_LEVEL=${LOG_LEVEL}
     volumes:
       - ./dns:/app
     depends_on:

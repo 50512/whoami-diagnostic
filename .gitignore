@@ -1,5 +1,3 @@
-.base/
-
 # deps / builds
 node_modules/
 web/dist/
