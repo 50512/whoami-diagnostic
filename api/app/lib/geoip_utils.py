@@ -22,24 +22,40 @@ MMDB_ATTRIBUTIONS = {
 
 @dataclass
 class _Entry:
+    """
+    Clase de entradas para almacenar cada `mmdb` con su firma para actualización en caliente.
+    """
+
     path: str
     reader: geoip2.database.Reader | None = None
     sign: tuple | None = None  # Firma (inode, mtime, size)
 
 
 def _stat_sign(path: str) -> tuple | None:
+    """
+    Genera la firma de un archivo.
+    """
     try:
         stat = os.stat(path)
-        return (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+        sign = (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+        log.debug(f"Firma de {path}: {sign}")
+        return sign
     except FileNotFoundError:
         return None
 
 
 def _open(path: str) -> geoip2.database.Reader:
+    """
+    Carga en memoria la `mmdb`.
+    """
     return geoip2.database.Reader(path, mode=MODE_MEMORY)
 
 
 class GeoIPManager:
+    """
+    Clase administradora de todo el ciclo de vida y consulta para las MaxMind Databases.
+    """
+
     def __init__(self, paths: dict[str, str], poll_interval: float = 30.0):
         self._entries = {name: _Entry(path) for name, path in paths.items()}
         self._poll_interval = poll_interval
@@ -48,6 +64,9 @@ class GeoIPManager:
 
     # --------- Reader ---------
     def reader(self, name: str) -> geoip2.database.Reader:
+        """
+        Devuelve el lector cargado en memoria.
+        """
         reader = self._entries[name].reader
         if reader is None:
             raise RuntimeError(f"geoip db '{name}' no cargada")
@@ -55,6 +74,10 @@ class GeoIPManager:
 
     # --------- Recarga en caliente ---------
     async def _reload(self, name: str) -> None:
+        """
+        Recarga en caliente la base de datos `mmdb` de manera atómica.
+        Solo actualiza si la firma actual difiere de la guardada.
+        """
         entry = self._entries[name]
         sign = _stat_sign(entry.path)
 
@@ -65,7 +88,7 @@ class GeoIPManager:
             new = await asyncio.to_thread(_open, entry.path)
         except Exception:
             log.exception(
-                f"geoip: fallo abriendo {entry.path}; Se conserva el reader anterior"
+                f"fallo abriendo {entry.path}; Se conserva el reader anterior"
             )
             return
 
@@ -74,15 +97,22 @@ class GeoIPManager:
         entry.sign = sign
 
         if old is not None:
+            # Cierra lector anterior
             old.close()
-        log.info(f"geoip: '{name}' recargada (build={new.metadata().build_epoch})")
+        log.info(f"mmdb {name} recargada (build={new.metadata().build_epoch})")
 
     async def load_all(self) -> None:
+        """
+        Carga todas las databases en memoria.
+        """
         async with self._lock:
             for name in self._entries:
                 await self._reload(name)
 
     async def _poll(self) -> None:
+        """
+        Ejecuta poll cada `poll_interval` segundos para mantener la base al día.
+        """
         while True:
             await asyncio.sleep(self._poll_interval)
             async with self._lock:
@@ -90,10 +120,16 @@ class GeoIPManager:
                     await self._reload(name)
 
     async def start(self) -> None:
+        """
+        Carga todas las `mmdb` y crea el loop de actualización.
+        """
         await self.load_all()
         self._task = asyncio.create_task(self._poll())
 
     async def stop(self) -> None:
+        """
+        Detiene el bucle de actualización y cierra los lectores en memoria.
+        """
         if self._task:
             self._task.cancel()
             try:
@@ -108,6 +144,11 @@ class GeoIPManager:
 def get_json_mmdb(
     ip: str, asn_reader: geoip2.database.Reader, city_reader: geoip2.database.Reader
 ) -> dict:
+    """
+    Regresa un JSON con los datos de la IP ingresada.
+    De no ser válida, regresa esqueleto en `None`.
+    Consulta las bases de datos ASN y CITY GeoLite2.
+    """
     res = {
         "ip": ip,
         "asn": None,
@@ -135,6 +176,7 @@ def get_json_mmdb(
     # --------- Consulta ASN ---------
     try:
         asn = asn_reader.asn(ip)
+        log.debug(f"Consulta asn: {asn}")
         res["asn"] = asn.autonomous_system_number
         res["asn_org"] = asn.autonomous_system_organization
         if asn.network is not None:
@@ -146,6 +188,7 @@ def get_json_mmdb(
     # --------- Consulta Geo ---------
     try:
         city = city_reader.city(ip)
+        log.debug(f"Consulta city: {city}")
         geo = res["geolocation"]
         geo["country"]["name"] = city.country.name
         geo["country"]["iso_code"] = city.country.iso_code
@@ -168,6 +211,10 @@ def get_json_mmdb(
 
 
 def get_resolver_mmdb(ip: str, asn_reader: geoip2.database.Reader) -> dict:
+    """
+    Función dedicada para datos de resolvers DNS.
+    Devuelve solo datos de ASN si la IP es válida.
+    """
     res = {
         "ip": ip,
         "asn": None,
@@ -178,6 +225,7 @@ def get_resolver_mmdb(ip: str, asn_reader: geoip2.database.Reader) -> dict:
         return res
     try:
         asn = asn_reader.asn(ip)
+        log.debug(f"Consulta asn para dns: {asn}")
         res["asn"] = asn.autonomous_system_number
         res["asn_org"] = asn.autonomous_system_organization
         if asn.network is not None:

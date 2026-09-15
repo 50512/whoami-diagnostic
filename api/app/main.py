@@ -50,18 +50,26 @@ logging.basicConfig(
 
 
 def get_plain_ip(request: Request) -> str:
+    """
+    Devuelve la primera IP en la lista de X-Forwarded-For. Asume que hay un proxy inverso adelante que ya saneo esta cabecera.
+    """
     return request.headers.get("x-forwarded-for", "127.0.0.1").split(",")[0]
 
 
 def get_headers(request: Request) -> dict[str, str]:
+    """
+    Devuelve las cabeceras del cliente en la lista de cabeceras permitidas.
+    """
     clean_headers = {
         key: value for key, value in request.headers.items() if key in ALLOWED_HEADERS
     }
-
     return clean_headers
 
 
 def get_ip_detail(request: Request):
+    """
+    Consulta en la base de datos `mmdb` los datos detallados de la IP del cliente.
+    """
     client_ip = get_plain_ip(request)
     manager = request.app.state.geoip
     data = get_json_mmdb(
@@ -72,11 +80,17 @@ def get_ip_detail(request: Request):
 
 
 def _epoch_to_iso(epoch: int) -> str:
+    """
+    Devuelve el timestamp ingresado en formato ISO-UTC.
+    """
     return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Inicializa y almacena el administrador de las bases `mmdb`, la conexión a redis y activa el actualizador RDAP.
+    """
     manager = GeoIPManager(
         {
             "asn": f"{GEOIP_PATH}/GeoLite2-ASN.mmdb",
@@ -102,9 +116,9 @@ app = FastAPI(lifespan=lifespan)
 @app.middleware("http")
 async def enforce_https(request: Request, call_next):
     """
-    Solo redirige a https cuando:
-    - No es herramienta cli
-    - No pertenece a los IP_HOSTS
+    Rechaza las peticiones con IP privada (no protege contra spoofing) en X-Forwarded-For.
+    Permite HTTP plano para clientes cli (lista blanca en `CLI_REGEX`) y en subdominios ipv4/6.
+    Excluye `/ready` e `/info` del middleware.
     """
     user_agent = request.headers.get("user-agent", "")
     forwarded_proto = request.headers.get("x-forwarded-proto", "http")
@@ -142,6 +156,9 @@ async def enforce_https(request: Request, call_next):
 @app.get("/")
 @app.get("/ip")
 async def root_dispatcher(request: Request):
+    """
+    Devuelve la IP del cliente en texto plano.
+    """
     client_ip = get_plain_ip(request)
     return PlainTextResponse(content=f"{client_ip}\n")
 
@@ -149,11 +166,17 @@ async def root_dispatcher(request: Request):
 @app.get("/ip/detail")
 @app.get("/ip/details")
 async def detail_dispatcher(request: Request):
+    """
+    Devuelve la consulta detallada de IP en JSON.
+    """
     return JSONResponse(content=get_ip_detail(request))
 
 
 @app.get("/client/headers")
 async def headers_dispatcher(request: Request):
+    """
+    Devuelve las cabeceras del cliente en JSON.
+    """
     return JSONResponse(content={"headers": get_headers(request)})
 
 
@@ -161,6 +184,9 @@ async def headers_dispatcher(request: Request):
 @app.get("/ip/all")
 @app.get("/all")
 async def all_data(request: Request):
+    """
+    Unificado de la consulta IP detallada y cabeceras del cliente en único JSON.
+    """
     data = get_ip_detail(request)
     data["headers"] = get_headers(request)
     return JSONResponse(content=data)
@@ -168,6 +194,11 @@ async def all_data(request: Request):
 
 @app.get("/dns-leak/{test_id}")
 async def dns_leak(test_id: str, request: Request):
+    """
+    Lee en redis la clave con el test_id correspondiente.
+    Si el token no cumple, se rechaza con 400. Responde 404
+    si no se encuentra los datos con el token (muy temprano o muy tarde).
+    """
     test_id = test_id.lower()
     if not TEST_ID_RE.match(test_id):
         return JSONResponse(
@@ -176,9 +207,10 @@ async def dns_leak(test_id: str, request: Request):
 
     redis = request.app.state.redis
     try:
+        log.debug(f"Leyendo token: {test_id}")
         ips = await redis.smembers(f"{LEAK_KEY_PREFIX}{test_id}")
-    except Exception as e:
-        log.exception(f"fastapi: Error al consultar redis: {e}")
+    except Exception:
+        log.exception(f"Error al consultar redis")
         return JSONResponse(
             {"error": "dns leak unavailable"},
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -186,7 +218,8 @@ async def dns_leak(test_id: str, request: Request):
 
     if not ips:
         return JSONResponse(
-            {"error": "not found"}, status_code=status.HTTP_404_NOT_FOUND
+            {"error": "not found entries with token"},
+            status_code=status.HTTP_404_NOT_FOUND,
         )
 
     asn_reader = request.app.state.geoip.reader("asn")
@@ -204,6 +237,9 @@ async def dns_leak(test_id: str, request: Request):
 
 @app.get("/info")
 async def info(request: Request):
+    """
+    Devuelve metadata de las `mmdb`.
+    """
     manager = getattr(request.app.state, "geoip", None)
     try:
         asn_last_update = manager.reader("asn").metadata().build_epoch
@@ -223,6 +259,9 @@ async def info(request: Request):
 
 @app.get("/ready")
 async def health_check(request: Request):
+    """
+    Endpoint de salud. Verifica funcionalidad de las `mmdb`.
+    """
     manager = getattr(request.app.state, "geoip", None)
     try:
         manager.reader("asn")
