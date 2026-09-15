@@ -1,0 +1,18 @@
+[project]
+name = "whoami-dns"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "dnspython>=2.7",
+    "redis>=5.2",
+]
+
+[dependency-groups]
+dev = [
+    "watchfiles>=1.0",
+    "black>=26.5.1",
+    "isort>=9.0.1",
+]
+
+[tool.uv]
+package = false

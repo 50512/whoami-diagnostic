@@ -16,6 +16,7 @@ jobs:
         include:
           - { image: whoami-web, context: ./web }
           - { image: whoami-api, context: ./api }
+          - { image: whoami-dns, context: ./dns }
     steps:
       - uses: actions/checkout@v4
 

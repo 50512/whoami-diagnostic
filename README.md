@@ -18,8 +18,8 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Rate limit para todos los endpoints ~~(FastAPI con slowapi)~~ de la API a nivel de _reverse proxy_.
 - [x] Asegurar CORS para los endpoints fuera de diag.
 - [x] Caché efímera en los endpoints API. Caché estática para el front estático
+- [x] DNS Leak, solo responde a A y AAAA, rechaza cualquier otro formato, limitado por IP (nftables en nodo edge).
 - [ ] `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
-- [ ] DNS Leak, solo responde a A y AAAA, rechaza cualquier otro formato, limitado por IP.
 - [ ] Redis de DNS Leak limitado a memoria 2M y solo 1 min de TTL.
 - [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
 - [ ] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
