@@ -165,3 +165,23 @@ def get_json_mmdb(
         pass
 
     return res
+
+
+def get_resolver_mmdb(ip: str, asn_reader: geoip2.database.Reader) -> dict:
+    res = {
+        "ip": ip,
+        "asn": None,
+        "asn_org": None,
+        "cidr": None,
+    }
+    if not is_valid_ip(ip):
+        return res
+    try:
+        asn = asn_reader.asn(ip)
+        res["asn"] = asn.autonomous_system_number
+        res["asn_org"] = asn.autonomous_system_organization
+        if asn.network is not None:
+            res["cidr"] = str(asn.network)
+    except AddressNotFoundError:
+        pass
+    return res

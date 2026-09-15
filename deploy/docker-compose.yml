@@ -41,6 +41,18 @@ services:
       - redis
       - geoipupdate
 
+  dns:
+    image: ghcr.io/50512/whoami-dns:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${DNS_PORT:-5353}:53/udp" # host 5353 → contenedor 53/udp
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DNS_ZONE=${DNS_ZONE:-dns-leak.host.com}
+      - DNS_PORT=53 # dentro del contenedor escucha en 53
+    depends_on:
+      - redis
+
   geoipupdate:
     image: ghcr.io/maxmind/geoipupdate:latest
     container_name: whoami-geoip-updater
@@ -58,7 +70,7 @@ services:
     image: redis:7-alpine
     container_name: whoami-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
 

@@ -1,13 +1,16 @@
+import logging
 import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+import redis.asyncio as aioredis
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
-from app.lib.geoip_utils import GeoIPManager, get_json_mmdb
+from app.lib.geoip_utils import (MMDB_ATTRIBUTIONS, GeoIPManager,
+                                 get_json_mmdb, get_resolver_mmdb)
 from app.lib.ip_addr_utils import is_valid_ip
 from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
 
@@ -16,6 +19,10 @@ EXCLUDED_MIDDLEWARE_PATHS = ["/ready", "/info"]
 
 GEOIP_PATH = os.environ.get("GEOIP_PATH", "/var/opt/GeoIP")
 CLI_REGEX = re.compile(r"(?i)(curl|wget|python|httpie|aria2)")
+
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+LEAK_KEY_PREFIX = "dnsleak:"
+TEST_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 ALLOWED_HEADERS = {
     "user-agent",
@@ -32,6 +39,8 @@ ALLOWED_HEADERS = {
 
 rdap_store = BootstrapStore()
 rdap_updater = BootstrapUpdater(rdap_store, data_dir=Path("/data/rdap-bootstrap"))
+
+log = logging.getLogger("fastapi")
 
 
 def get_plain_ip(request: Request) -> str:
@@ -70,6 +79,7 @@ async def lifespan(app: FastAPI):
     )
     await manager.start()
     app.state.geoip = manager
+    app.state.redis = aioredis.from_url(REDIS_URL, decode_responses=True)
 
     await rdap_updater.start()
     try:
@@ -77,6 +87,7 @@ async def lifespan(app: FastAPI):
     finally:
         await manager.stop()
         await rdap_updater.stop()
+        await app.state.redis.aclose()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -112,7 +123,9 @@ async def enforce_https(request: Request, call_next):
             secure_url = f"https://{host}{request.url.path}"
             if request.url.query:
                 secure_url += f"?{request.url.query}"
-            return RedirectResponse(url=secure_url, status_code=301)
+            return RedirectResponse(
+                url=secure_url, status_code=status.HTTP_301_MOVED_PERMANENTLY
+            )
 
     elif forwarded_proto == "https":
         response = await call_next(request)
@@ -147,6 +160,42 @@ async def all_data(request: Request):
     return JSONResponse(content=data)
 
 
+@app.get("/dns-leak/{test_id}")
+async def dns_leak(test_id: str, request: Request):
+    test_id = test_id.lower()
+    if not TEST_ID_RE.match(test_id):
+        return JSONResponse(
+            {"error": "invalid test id"}, status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    redis = request.app.state.redis
+    try:
+        ips = await redis.smembers(f"{LEAK_KEY_PREFIX}{test_id}")
+    except Exception as e:
+        log.error(f"fastapi: Error al consultar redis: {e}")
+        return JSONResponse(
+            {"error": "dns leak unavailable"},
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    if not ips:
+        return JSONResponse(
+            {"error": "not found"}, status_code=status.HTTP_404_NOT_FOUND
+        )
+
+    asn_reader = request.app.state.geoip.reader("asn")
+    resolvers = [get_resolver_mmdb(ip, asn_reader) for ip in sorted(ips)]
+
+    return JSONResponse(
+        {
+            "test_id": test_id,
+            "count": len(resolvers),
+            "resolvers": resolvers,
+            "attributions": MMDB_ATTRIBUTIONS,
+        }
+    )
+
+
 @app.get("/info")
 async def info(request: Request):
     manager = getattr(request.app.state, "geoip", None)
@@ -154,7 +203,9 @@ async def info(request: Request):
         asn_last_update = manager.reader("asn").metadata().build_epoch
         city_last_update = manager.reader("city").metadata().build_epoch
     except (AttributeError, RuntimeError):
-        return JSONResponse({"status": "NOT READY"}, status_code=503)
+        return JSONResponse(
+            {"status": "NOT READY"}, status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     return JSONResponse(
         {
             "status": "OK",
@@ -171,5 +222,7 @@ async def health_check(request: Request):
         manager.reader("asn")
         manager.reader("city")
     except (AttributeError, RuntimeError):
-        return JSONResponse({"status": "NOT READY"}, status_code=503)
+        return JSONResponse(
+            {"status": "NOT READY"}, status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     return JSONResponse({"status": "OK"})
