@@ -24,7 +24,6 @@ services:
         - MAXMIND_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
         - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./api:/app
     environment:

@@ -14,6 +14,8 @@ from app.lib.geoip_utils import (MMDB_ATTRIBUTIONS, GeoIPManager,
 from app.lib.ip_addr_utils import is_valid_ip
 from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
 
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
 IP_HOSTS = [os.environ.get("IPV4_HOST"), os.environ.get("IPV6_HOST")]
 EXCLUDED_MIDDLEWARE_PATHS = ["/ready", "/info"]
 
@@ -40,7 +42,11 @@ ALLOWED_HEADERS = {
 rdap_store = BootstrapStore()
 rdap_updater = BootstrapUpdater(rdap_store, data_dir=Path("/data/rdap-bootstrap"))
 
-log = logging.getLogger("fastapi")
+log = logging.getLogger("api")
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 def get_plain_ip(request: Request) -> str:
