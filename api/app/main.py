@@ -46,7 +46,7 @@ ALLOWED_HEADERS = {
 rdap_store = BootstrapStore()
 rdap_updater = BootstrapUpdater(rdap_store, data_dir=Path("/data/rdap-bootstrap"))
 
-log = logging.getLogger("api")
+log = logging.getLogger("fastapi.access")
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -127,11 +127,12 @@ async def enforce_https(request: Request, call_next):
     user_agent = request.headers.get("user-agent", "")
     forwarded_proto = request.headers.get("x-forwarded-proto", "http")
     host = request.headers.get("host", "")
+    client_ip = get_plain_ip(request)
 
     if request.url.path in EXCLUDED_MIDDLEWARE_PATHS:
         return await call_next(request)
 
-    if not is_valid_ip(get_plain_ip(request)):
+    if not is_valid_ip(client_ip):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "must be a public ip"},
@@ -153,6 +154,15 @@ async def enforce_https(request: Request, call_next):
 
     elif forwarded_proto == "https":
         response = await call_next(request)
+
+    log.info(
+        '%s - "%s %s HTTP/%s" %s',
+        client_ip,
+        request.method,
+        request.headers.get("host", "-") + request.url.path,
+        request.scope.get("http_version", "-"),
+        response.status_code,
+    )
 
     return response
 
