@@ -57,7 +57,7 @@ def get_plain_ip(request: Request) -> str:
     """
     Devuelve la primera IP en la lista de X-Forwarded-For. Asume que hay un proxy inverso adelante que ya saneo esta cabecera.
     """
-    return request.headers.get("x-forwarded-for", "127.0.0.1").split(",")[0]
+    return request.headers.get("x-forwarded-for").split(",")[0]
 
 
 def get_headers(request: Request) -> dict[str, str]:
@@ -128,27 +128,28 @@ async def enforce_https(request: Request, call_next):
     forwarded_proto = request.headers.get("x-forwarded-proto", "http")
     host = request.headers.get("host", "")
     client_ip = get_plain_ip(request)
+    
+    is_cli = bool(CLI_REGEX.search(user_agent)) or not user_agent
+    response = None
+
 
     if request.url.path in EXCLUDED_MIDDLEWARE_PATHS:
-        return await call_next(request)
+        response = await call_next(request)
 
-    if not is_valid_ip(client_ip):
-        return JSONResponse(
+    elif not is_valid_ip(client_ip):
+        response = JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "must be a public ip"},
         )
 
-    is_cli = bool(CLI_REGEX.search(user_agent)) or not user_agent
-    response = None
-
-    if forwarded_proto == "http":
+    elif forwarded_proto == "http":
         if is_cli or host in IP_HOSTS:
             response = await call_next(request)
         else:
             secure_url = f"https://{host}{request.url.path}"
             if request.url.query:
                 secure_url += f"?{request.url.query}"
-            return RedirectResponse(
+            response = RedirectResponse(
                 url=secure_url, status_code=status.HTTP_301_MOVED_PERMANENTLY
             )
 
@@ -157,7 +158,7 @@ async def enforce_https(request: Request, call_next):
 
     log.info(
         '%s - "%s %s HTTP/%s" %s',
-        client_ip,
+        client_ip if client_ip else request.client.host,
         request.method,
         request.headers.get("host", "-") + request.url.path,
         request.scope.get("http_version", "-"),
