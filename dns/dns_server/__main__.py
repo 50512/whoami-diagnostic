@@ -77,6 +77,13 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         token = self._extract_token(q_name)
         if token:
             resolver_ip = real_ip or addr[0]
+
+            if not is_valid_ip(resolver_ip):
+                # Las peticiones que reutilizan una conexión no vuelven a enviar PP.
+                # Al descartar no se pierde datos, el 1er paquete de la conexión si posee PP.
+                log.debug(f"Se descarta la IP {resolver_ip}. No posee header PP")
+                return
+
             log.debug(f"real_ip: {real_ip}; addr[0]: {addr[0]}")
             asyncio.create_task(self._record(token, resolver_ip, q_type))
 
@@ -180,6 +187,30 @@ def strip_proxy_protocol_v2(data: bytes) -> tuple[str | None, bytes]:
         log.exception("Error en la traducción de la IP a string.")
         src_ip = None
     return src_ip, payload
+
+
+def is_valid_ip(ip: str) -> bool:
+    """
+    Valida si una IP esta bien formada y que sea pública.
+    """
+    try:
+        addr = ipaddress.ip_address(ip.strip())
+        log.debug(f"Leyendo: {addr}")
+    except ValueError:
+        return False
+
+    if not addr.is_global:
+        return False
+
+    if (
+        addr.is_multicast
+        or addr.is_loopback
+        or addr.is_unspecified
+        or addr.is_link_local
+    ):
+        return False
+
+    return True
 
 
 async def main():
