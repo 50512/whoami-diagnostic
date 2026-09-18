@@ -53,11 +53,14 @@ logging.basicConfig(
 )
 
 
-def get_plain_ip(request: Request) -> str:
+def get_plain_ip(request: Request) -> str | None:
     """
     Devuelve la primera IP en la lista de X-Forwarded-For. Asume que hay un proxy inverso adelante que ya saneo esta cabecera.
     """
-    return request.headers.get("x-forwarded-for").split(",")[0]
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0]
+    return None
 
 
 def get_headers(request: Request) -> dict[str, str]:
