@@ -161,7 +161,7 @@ class BootstrapUpdater:
         """
         path = self._meta_path(name)
         try:
-            return json.loads(path.read_text()) if path.exists else {}
+            return json.loads(path.read_text()) if path.exists() else {}
         except Exception:
             return {}
 
@@ -233,7 +233,7 @@ class BootstrapUpdater:
             # Contenido no cambió. Se actualiza la ventana y se mantiene los docs actuales
             meta["checked_at"] = now
             meta["next_check"] = self._next_check_from(res, now)
-            self._write_atomic(self._meta_path(name), json.dumps(meta))
+            self._write(self._meta_path(name), json.dumps(meta))
             log.info(f"{name} sin cambios")
             return None
 

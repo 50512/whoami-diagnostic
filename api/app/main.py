@@ -9,8 +9,12 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
-from app.lib.geoip_utils import (MMDB_ATTRIBUTIONS, GeoIPManager,
-                                 get_json_mmdb, get_resolver_mmdb)
+from app.lib.geoip_utils import (
+    MMDB_ATTRIBUTIONS,
+    GeoIPManager,
+    get_json_mmdb,
+    get_resolver_mmdb,
+)
 from app.lib.ip_addr_utils import is_valid_ip
 from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
 
