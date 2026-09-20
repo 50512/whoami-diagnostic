@@ -8,6 +8,7 @@ services:
       - IPV6_HOST=${IPV6_HOST}
       - MAIN_HOST=${MAIN_HOST}
       - TRUSTED_PROXIES=${TRUSTED_PROXIES}
+      - TRUSTED_HEADERS=${TRUSTED_HEADERS}
     depends_on:
       - api
     networks:
