@@ -23,7 +23,7 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Redis de DNS Leak limitado a memoria 64mb y solo 1 min de TTL.
 - [x] Mini refactor a Routes.
 - [x] Dedup de DNSLeak en base a ASN/Network. Añadir lista de IPs detectadas.
-- [ ] Speedtest. ~~Archivo estático~~ Endpoint que genera basura para descarga y endpoint POST vacío para subida. Medición de múltiples conexiones paralelas desde el front.
+- [x] Speedtest. ~~Archivo estático~~ Endpoint que genera basura para descarga y endpoint POST vacío para subida. Medición de múltiples conexiones paralelas desde el front.
 - [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
 - [ ] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
 - [ ] Front pide headers por `diag.50512.dev/client/headers`.
