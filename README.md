@@ -21,6 +21,7 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] DNS Leak, solo responde a A y AAAA, rechaza cualquier otro formato, limitado por IP (nftables en nodo edge).
 - [x] `/dns-leak/{uuid}` devuelve la IP obtenida en redis o 404 en caso no existir registro (front intenta 3 peticiones).
 - [x] Redis de DNS Leak limitado a memoria 64mb y solo 1 min de TTL.
+- [x] Mini refactor a Routes.
 - [ ] Dedup de DNSLeak en base a ASN/Network. Añadir lista de IPs detectadas.
 - [ ] Speedtest. Archivo estático basura para descarga y endpoint POST vacío para subida. Medici�n de múltiples conexiones paralelas desde el front.
 - [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
