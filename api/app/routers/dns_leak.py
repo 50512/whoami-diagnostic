@@ -3,6 +3,7 @@ import re
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
+from geoip2.database import Reader
 
 from app.lib.geoip_utils import MMDB_ATTRIBUTIONS, get_resolver_mmdb
 
@@ -44,7 +45,9 @@ async def dns_leak(test_id: str, request: Request):
         )
 
     asn_reader = request.app.state.geoip.reader("asn")
-    resolvers = [get_resolver_mmdb(ip, asn_reader) for ip in sorted(ips)]
+    log.debug(f"Lista de IP: {ips}")
+    log.debug(f"Lista de IP ordenadas: {sorted(ips)}")
+    resolvers = get_resolvers_mmdb(ips, asn_reader)
 
     return JSONResponse(
         {
@@ -54,3 +57,34 @@ async def dns_leak(test_id: str, request: Request):
             "attributions": MMDB_ATTRIBUTIONS,
         }
     )
+
+
+def get_resolvers_mmdb(ips: list[str], asn_reader: Reader) -> dict:
+    """
+    Itera sobre una lista de IPs y los unifica bajo ASN como identificador de resolver individual.
+    """
+    resolvers = [get_resolver_mmdb(ip, asn_reader) for ip in sorted(ips)]
+
+    deduped: dict = {}
+    for resolver in resolvers:
+        asn = resolver["asn"]
+        entry = deduped.get(asn)
+
+        if entry is None:
+            log.debug(f"Creando clave asn: {asn}")
+            entry = deduped[asn] = {
+                "asn": asn,
+                "asn_org": resolver["asn_org"],
+                "ips": set(),
+                "cidrs": set(),
+            }
+        entry["ips"].add(resolver["ip"])
+        entry["cidrs"].add(resolver["cidr"])
+
+    log.debug(f"deduped: {deduped}")
+    for entry in deduped.values():
+
+        entry["ips"] = sorted(list(entry["ips"]))
+        entry["cidrs"] = sorted(list(entry["cidrs"]))
+
+    return dict(sorted(deduped.items()))
