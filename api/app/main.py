@@ -12,7 +12,9 @@ from app.deps import get_plain_ip
 from app.lib.geoip_utils import GeoIPManager
 from app.lib.ip_addr_utils import is_valid_ip
 from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
-from app.routers import client, dns_leak, ip, meta
+from app.routers import client, dns_leak, ip, meta, speed
+
+ENABLE_DOCS = str(os.getenv("ENABLE_DOCS")).lower() in ("1", "on", "enable", "true")
 
 IP_HOSTS = [os.environ.get("IPV4_HOST"), os.environ.get("IPV6_HOST")]
 EXCLUDED_MIDDLEWARE_PATHS = ["/ready", "/info"]
@@ -56,11 +58,17 @@ async def lifespan(app: FastAPI):
         await app.state.redis.aclose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
+)
 app.include_router(ip.router)
 app.include_router(client.router)
 app.include_router(dns_leak.router)
 app.include_router(meta.router)
+app.include_router(speed.router)
 
 
 @app.middleware("http")

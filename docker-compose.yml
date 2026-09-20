@@ -32,6 +32,7 @@ services:
       - IPV4_HOST=${IPV4_HOST}
       - IPV6_HOST=${IPV6_HOST}
       - LOG_LEVEL=${LOG_LEVEL}
+      - ENABLE_DOCS=${ENABLE_DOCS}
     depends_on:
       - redis
 

@@ -4,10 +4,12 @@ import logging
 log = logging.getLogger("ip_utils")
 
 
-def is_valid_ip(ip: str) -> bool:
+def is_valid_ip(ip: str | None) -> bool:
     """
     Valida si una IP esta bien formada y que sea pública.
     """
+    if not ip:
+        return False
     try:
         addr = ipaddress.ip_address(ip.strip())
         log.debug(f"Leyendo: {addr}")
