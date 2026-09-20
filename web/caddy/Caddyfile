@@ -1,7 +1,7 @@
 {
 	servers {
 		# Necesario para evitar inyecciones de IP falsas y recibir la IP desde proxies inversos
-		trusted_proxies static 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+		trusted_proxies static 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 {$TRUSTED_PROXIES:}
 		client_ip_headers X-Forwarded-For
 	}
 }
@@ -51,11 +51,12 @@
 }
 
 :80 {
-	encode
+	@compressible not path /speed/*
+	encode @compressible
 
 	# Rutas de API
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /ready /info /all
+		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /speed /speed/* /ready /info /all
 	}
 	handle @api_paths {
 		import to_api
@@ -69,7 +70,7 @@
 		import to_api
 	}
 
-  # User-Agent correspondiente a herramientas cli no fuerza https y manda directo a la API
+	# User-Agent correspondiente a herramientas cli no fuerza https y manda directo a la API
 	@cli_client expression `header_regexp('User-Agent', '(?i)(curl|wget|python|httpie|aria2)') || !header({'User-Agent': '*'})`
 	handle @cli_client {
 		import to_api
