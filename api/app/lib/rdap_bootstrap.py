@@ -193,14 +193,12 @@ class BootstrapUpdater:
                     return checked_at + int(part.split("=", 1)[1])
                 except ValueError:
                     log.exception("cabecera 'Cache-Control' mal formada o inexistente")
-                    pass
         exp = res.headers.get("Expires")
         if exp:
             try:
                 return parsedate_to_datetime(exp).timestamp()
             except (TypeError, ValueError):
                 log.exception("cabecera 'Expires' mal formada o inexistente")
-                pass
         return checked_at + self.interval_hours * 3600
 
     async def _fetch(

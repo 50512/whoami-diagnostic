@@ -9,7 +9,7 @@
 (cors_headers) {
 	# Para permitir la detección y medición desde el frontend
 	header Access-Control-Allow-Origin "https://{env.MAIN_HOST}"
-	header Access-Control-Allow-Methods "GET, OPTIONS"
+	header Access-Control-Allow-Methods "GET, POST, OPTIONS"
 	header Access-Control-Allow-Headers "Content-Type"
 	header Timing-Allow-Origin "https://{env.MAIN_HOST}"
 }
@@ -53,6 +53,14 @@
 :80 {
 	@compressible not path /speed/*
 	encode @compressible
+
+	# Responder el preflight de CORS
+	@preflight method OPTIONS
+	handle @preflight {
+		import cors_headers
+		header Access-Control-Max-Age "600"
+		respond 204
+	}
 
 	# Rutas de API
 	@api_paths {

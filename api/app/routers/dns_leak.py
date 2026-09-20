@@ -32,7 +32,7 @@ async def dns_leak(test_id: str, request: Request):
         log.debug(f"Leyendo token: {test_id}")
         ips = await redis.smembers(f"{LEAK_KEY_PREFIX}{test_id}")
     except Exception:
-        log.exception(f"Error al consultar redis")
+        log.exception("Error al consultar redis")
         return JSONResponse(
             {"error": "dns leak unavailable"},
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -84,7 +84,7 @@ def get_resolvers_mmdb(ips: list[str], asn_reader: Reader) -> dict:
     log.debug(f"deduped: {deduped}")
     for entry in deduped.values():
 
-        entry["ips"] = sorted(list(entry["ips"]))
-        entry["cidrs"] = sorted(list(entry["cidrs"]))
+        entry["ips"] = sorted(entry["ips"])
+        entry["cidrs"] = sorted(entry["cidrs"])
 
     return dict(sorted(deduped.items()))

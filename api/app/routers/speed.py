@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
@@ -15,7 +16,7 @@ DEFAULT_SIZE = 40 << 20  # 40MiB
 
 
 @router.get("/download")
-async def speed_download(size: int = Query(default=DEFAULT_SIZE, ge=1, le=MAX_SIZE)):
+async def speed_download(size: Annotated[int, Query(ge=1, le=MAX_SIZE)] = DEFAULT_SIZE):
     """
     Genera un archivo entre 1B a 500MiB (basado en bloques de 1MiB) para descarga.
     """
