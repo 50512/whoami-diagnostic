@@ -1,6 +1,6 @@
 {
   "name": "Astro Dev Env",
-  "dockerComposeFile": "../docker-compose.yml",
+  "dockerComposeFile": "../../docker-compose.yml",
   "service": "astro-dev",
   "workspaceFolder": "/app",
   "customizations": {

@@ -1,6 +1,8 @@
 services:
   caddy:
-    build: ./web
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
     container_name: whoami-caddy
     restart: unless-stopped
     ports:
@@ -9,12 +11,24 @@ services:
       - IPV4_HOST=${IPV4_HOST}
       - IPV6_HOST=${IPV6_HOST}
       - MAIN_HOST=${MAIN_HOST}
+      - WEB_ENV=${WEB_ENV}
     volumes:
       - ./web/caddy:/etc/caddy
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
+      - astro-dev
+
+  astro-dev:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "corepack enable pnpm && pnpm install && rm -f .astro/dev.json && pnpm run dev --host 0.0.0.0"
+    environment:
+      - ALLOWED_HOSTS=${MAIN_HOST}
+    volumes:
+      - ./web/app:/app
 
   api:
     build:

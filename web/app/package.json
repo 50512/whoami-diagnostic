@@ -1,0 +1,26 @@
+{
+  "name": "app",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@50512/ui": "https://github.com/50512/50512-ui/archive/refs/tags/v0.9.0.tar.gz",
+    "astro": "^7.3.3",
+    "prettier": "^3.9.8",
+    "prettier-plugin-astro": "^1.0.1"
+  },
+  "allowScripts": {
+    "esbuild": true
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}
