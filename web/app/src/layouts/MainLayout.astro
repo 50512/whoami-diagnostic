@@ -1,0 +1,31 @@
+---
+import { AppShell } from "@50512/ui/layout";
+import { NavBar, NavLink } from "@50512/ui/nav";
+import MainCard from "./MainCard.astro";
+---
+
+<AppShell
+  title="IP Diagnostic"
+  status="trial"
+  barLabel="en construcción"
+  footerMarginAuto={false}
+>
+  <script slot="head" src="/env.js"></script>
+  <NavBar slot="navbar" baseURL="/">
+    <NavLink href="/">Inicio</NavLink>
+  </NavBar>
+  <div class="wrap">
+    <MainCard>
+      <slot />
+    </MainCard>
+  </div>
+</AppShell>
+<style>
+  .wrap {
+    height: 100%;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>

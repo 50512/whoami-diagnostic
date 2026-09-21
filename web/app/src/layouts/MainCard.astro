@@ -1,0 +1,29 @@
+---
+import "@50512/ui/fonts.css";
+import "@50512/ui/styles.css";
+---
+
+<main>
+  <div class="wrapper">
+    <slot />
+  </div>
+</main>
+<style>
+  main {
+    padding: 0 var(--space-5);
+    max-width: 800px;
+    width: 100vw;
+  }
+  .wrapper {
+    max-width: var(--content-max);
+    margin: auto auto;
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+
+    padding: var(--space-3);
+    box-shadow: var(--shadow-label-gray);
+
+    border: var(--border-soft);
+  }
+</style>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="50512.dev — marca">
+  <title>50512.dev — marca</title>
+  <desc>Generado por scripts/build-brand.mjs.</desc>
+  <rect x="0" y="0" width="256" height="256" rx="24" fill="#1a1f24"/>
+  <circle cx="56" cy="128" r="24" fill="#00b1f2"/>
+  <circle cx="128" cy="128" r="24" fill="#ff9900"/>
+  <circle cx="200" cy="128" r="24" fill="#6b747d"/>
+</svg>

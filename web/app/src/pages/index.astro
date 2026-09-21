@@ -1,17 +1,111 @@
 ---
-
+import MainLayout from "../layouts/MainLayout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<MainLayout>
+  <div class="title">
+    <h1>IP Diagnostic</h1>
+  </div>
+  <div class="header">
+    <h2 id="ip-h2">Cargando IP...</h2>
+    <h3 id="ip-h3" class="hidden">
+      Cargando IP...
+    </h3>
+  </div>
+</MainLayout>
+
+<script>
+  const mainIP = document.getElementById("ip-h2") as HTMLElement;
+  const secondIP = document.getElementById("ip-h3") as HTMLElement;
+
+  const IP_VERSIONS = ["ipv4", "ipv6"] as const;
+  type IPVersion = (typeof IP_VERSIONS)[number];
+
+  interface IPDetail {
+    ip: string;
+    [key: string]: unknown;
+  }
+
+  const BASE_URLS = {
+    ipv4: `https://${window.__ENV__.IPV4_HOST}`,
+    ipv6: `https://${window.__ENV__.IPV6_HOST}`,
+    main: `https://${window.__ENV__.MAIN_HOST}`,
+  };
+
+  const data: Record<IPVersion, IPDetail | null> = {
+    ipv4: null,
+    ipv6: null,
+  };
+
+  const rtt: Record<IPVersion, number | null> = {
+    ipv4: null,
+    ipv6: null,
+  };
+
+  const FETCH_URLS = {
+    ipv4: `${BASE_URLS.ipv4}/ip/detail`,
+    ipv6: `${BASE_URLS.ipv6}/ip/detail`,
+  };
+
+  await set_data();
+  console.log(data);
+
+  if (data.ipv4) {
+    mainIP.innerText = data.ipv4.ip;
+  } else if (data.ipv6) {
+    mainIP.innerText = data.ipv6.ip;
+  }
+
+  if (data.ipv6 && data.ipv4) {
+    secondIP.innerText = data.ipv6.ip;
+    secondIP.classList.remove("hidden");
+  }
+
+  async function set_data() {
+    await Promise.all(
+      IP_VERSIONS.map(async (e) => {
+        try {
+          const fetchIP = await fetch(FETCH_URLS[e]);
+          data[e] = await fetchIP.json();
+        } catch (e) {
+          console.error(e);
+        }
+      }),
+    );
+  }
+</script>
+
+<style>
+  .header {
+    border-bottom: var(--border-dashed);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h3,
+  h2 {
+    text-align: center;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  h3.hidden {
+    display: none;
+  }
+
+  .title {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    h1 {
+      white-space: nowrap;
+      border: var(--border-soft);
+      background: var(--surface-1);
+      box-shadow: var(--shadow-label-orange);
+      width: fit-content;
+      padding: var(--space-1);
+      position: absolute;
+      top: -50px;
+    }
+  }
+</style>
