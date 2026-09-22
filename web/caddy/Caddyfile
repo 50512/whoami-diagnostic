@@ -35,6 +35,11 @@
 	@documents not path_regexp \.(?i:css|js|mjs|map|woff2?|ttf|otf|eot|png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|mp3|ogg|wasm)$
 	header @documents Cache-Control "public, max-age=300, must-revalidate"
 	header @documents CDN-Cache-Control "public, max-age=300, must-revalidate"
+
+	# Mantiene el env.js por 5 minutos
+	@env_cache path /env.js
+	header @env_cache Cache-Control "public, max-age=300, must-revalidate"
+	header @env_cache CDN-Cache-Control "public, max-age=300, must-revalidate"
 }
 
 (to_api) {

@@ -15,63 +15,140 @@ import MainLayout from "../layouts/MainLayout.astro";
 </MainLayout>
 
 <script>
-  const mainIP = document.getElementById("ip-h2") as HTMLElement;
-  const secondIP = document.getElementById("ip-h3") as HTMLElement;
-
   const IP_VERSIONS = ["ipv4", "ipv6"] as const;
   type IPVersion = (typeof IP_VERSIONS)[number];
 
+  interface IPGeolocation {
+    country: {
+      name: string | null;
+      iso_code: string | null;
+    };
+    region: string | null;
+    city: string | null;
+    continent_code: string | null;
+    zip_code: string | null;
+  }
+
+  interface Location {
+    latitude: number | null;
+    longitude: number | null;
+    accuracy_radius: number | null;
+    timezone: string | null;
+  }
+
+  interface Attributions {
+    source: string;
+    text: string;
+    url: string;
+  }
+
+  interface ResolverInfo {
+    asn: number | null;
+    asn_org: string | null;
+    ips: Array<string> | null;
+    cidrs: Array<string> | null;
+  }
+
+  interface DNSLeak {
+    test_id: string;
+    count: number;
+    resolvers: Record<string, ResolverInfo>;
+    attributions: Record<string, Attributions> | null;
+  }
+
   interface IPDetail {
     ip: string;
-    [key: string]: unknown;
+    asn: number | null;
+    asn_org: string | null;
+    cidr: string | null;
+    geolocation: IPGeolocation | null;
+    location: Location | null;
+    attributions: Record<string, Attributions> | null;
+    rdap_url: string | null;
   }
 
-  const BASE_URLS = {
-    ipv4: `https://${window.__ENV__.IPV4_HOST}`,
-    ipv6: `https://${window.__ENV__.IPV6_HOST}`,
-    main: `https://${window.__ENV__.MAIN_HOST}`,
-  };
-
-  const data: Record<IPVersion, IPDetail | null> = {
-    ipv4: null,
-    ipv6: null,
-  };
-
-  const rtt: Record<IPVersion, number | null> = {
-    ipv4: null,
-    ipv6: null,
-  };
-
-  const FETCH_URLS = {
-    ipv4: `${BASE_URLS.ipv4}/ip/detail`,
-    ipv6: `${BASE_URLS.ipv6}/ip/detail`,
-  };
-
-  await set_data();
-  console.log(data);
-
-  if (data.ipv4) {
-    mainIP.innerText = data.ipv4.ip;
-  } else if (data.ipv6) {
-    mainIP.innerText = data.ipv6.ip;
+  interface Headers {
+    headers: Record<string, string>;
   }
 
-  if (data.ipv6 && data.ipv4) {
-    secondIP.innerText = data.ipv6.ip;
-    secondIP.classList.remove("hidden");
+  interface IPFetchResult {
+    data: IPDetail | null;
+    rtt: number | null;
   }
 
-  async function set_data() {
+  function measureRTT(url: string): number | null {
+    const entries = performance.getEntriesByName(
+      url,
+      "resource",
+    ) as PerformanceResourceTiming[];
+    const metric = entries[entries.length - 1];
+
+    if (!metric) return null;
+
+    if (metric.responseStart > 0 && metric.requestStart > 0) {
+      return Math.round(metric.responseStart - metric.requestStart);
+    }
+    return null;
+  }
+
+  async function fetchIPDetails(): Promise<Record<IPVersion, IPFetchResult>> {
+    const results: Record<IPVersion, IPFetchResult> = {
+      ipv4: {
+        data: null,
+        rtt: null,
+      },
+      ipv6: {
+        data: null,
+        rtt: null,
+      },
+    };
+
+    const FETCH_URLS = {
+      ipv4: `https://${window.__ENV__.IPV4_HOST}/ip/detail`,
+      ipv6: `https://${window.__ENV__.IPV6_HOST}/ip/detail`,
+    };
+
     await Promise.all(
-      IP_VERSIONS.map(async (e) => {
+      IP_VERSIONS.map(async (version) => {
+        const url = FETCH_URLS[version];
         try {
-          const fetchIP = await fetch(FETCH_URLS[e]);
-          data[e] = await fetchIP.json();
-        } catch (e) {
-          console.error(e);
+          const res = await fetch(FETCH_URLS[version]);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          const data = (await res.json()) as IPDetail;
+          const rtt = measureRTT(url);
+
+          results[version] = { data, rtt };
+        } catch (err) {
+          console.error(`Error al obtener ${version}`, err);
         }
       }),
     );
+
+    return results;
+  }
+
+  document.addEventListener("astro:page-load", load_all);
+  async function load_all() {
+    const mainIP = document.getElementById("ip-h2");
+    const secondIP = document.getElementById("ip-h3");
+
+    if (!mainIP || !secondIP) return;
+
+    const { ipv4, ipv6 } = await fetchIPDetails();
+
+    console.log({ ipv4, ipv6 });
+
+    if (ipv4.data) {
+      mainIP.innerText = ipv4.data.ip;
+    } else if (ipv6.data) {
+      mainIP.innerText = ipv6.data.ip;
+    }
+
+    if (ipv6.data && ipv4.data) {
+      secondIP.innerText = ipv6.data.ip;
+      secondIP.classList.remove("hidden");
+    }
   }
 </script>
 
