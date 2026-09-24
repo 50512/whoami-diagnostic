@@ -88,6 +88,8 @@ async def enforce_https(request: Request, call_next):
 
     if request.url.path in EXCLUDED_MIDDLEWARE_PATHS:
         response = await call_next(request)
+        if request.url.path == "/ready" and LOG_LEVEL != "DEBUG":
+            return await call_next(request)
 
     elif not is_valid_ip(client_ip):
         response = JSONResponse(

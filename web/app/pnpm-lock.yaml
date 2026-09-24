@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@50512/ui':
-        specifier: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.0.tar.gz
-        version: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.0.tar.gz(astro@7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@26.6.2))
+        specifier: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.1.tar.gz
+        version: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.1.tar.gz(astro@7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@26.6.2))
       astro:
         specifier: ^7.3.3
         version: 7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@26.6.2)
@@ -27,9 +27,9 @@ importers:
 
 packages:
 
-  '@50512/ui@https://github.com/50512/50512-ui/archive/refs/tags/v0.10.0.tar.gz':
-    resolution: {integrity: sha512-nBetDQqipC2Km1snB/GffTTKPC2bAhE6mGE29xEC5RsZwf/vItLPA4dWqIo0MorwKdqYwzM7tfS5aAJhlJWl2Q==, tarball: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.0.tar.gz}
-    version: 0.10.0
+  '@50512/ui@https://github.com/50512/50512-ui/archive/refs/tags/v0.10.1.tar.gz':
+    resolution: {integrity: sha512-pu7qfFzP7aqoIoqLrSyG9VF8q4tdX9XboQgniGn96YyLdjlGBV5oL8AfDd4F8c0YlCBN4P0M69U3Rk9rYKEfSQ==, tarball: https://github.com/50512/50512-ui/archive/refs/tags/v0.10.1.tar.gz}
+    version: 0.10.1
     engines: {node: '>=22.12.0'}
     peerDependencies:
       astro: ^7.0.0
@@ -1447,7 +1447,7 @@ packages:
 
 snapshots:
 
-  '@50512/ui@https://github.com/50512/50512-ui/archive/refs/tags/v0.10.0.tar.gz(astro@7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@26.6.2))':
+  '@50512/ui@https://github.com/50512/50512-ui/archive/refs/tags/v0.10.1.tar.gz(astro@7.3.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@26.6.2))':
     dependencies:
       '@fontsource/barlow': 5.3.0
       '@fontsource/cascadia-mono': 5.3.0
