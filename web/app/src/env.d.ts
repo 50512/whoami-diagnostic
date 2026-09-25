@@ -3,5 +3,6 @@ interface Window {
     MAIN_HOST: string;
     IPV4_HOST: string;
     IPV6_HOST: string;
+    LEAK_ZONE: string;
   };
 }

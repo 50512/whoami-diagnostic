@@ -143,6 +143,39 @@ import MainLayout from "../layouts/MainLayout.astro";
     return results;
   }
 
+  /**
+   * Ejecuta las peticiones al UUID en la zona de leak DNS y luego consulta
+   * al endpoint del leak la información de los resolvers que consultaron el
+   * UUID
+   */
+  async function getDNSLeak(): Promise<DNSLeak | null> {
+    const test_id = crypto.randomUUID().replaceAll("-", "");
+    const requests = [];
+    let results = null;
+
+    for (let i = 0; i < 10; i++) {
+      const url = `https://${i}.${test_id}.${window.__ENV__.LEAK_ZONE}`;
+      requests.push(
+        fetch(url, {
+          mode: "no-cors",
+        }).catch(() => {}),
+      );
+    }
+
+    await Promise.allSettled(requests);
+    console.log("Leak id:", test_id);
+
+    try {
+      const res = await fetch(`/dns-leak/${test_id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results = (await res.json()) as DNSLeak;
+    } catch (err) {
+      console.error(`Error al obtener los resultados: ${err}`);
+    }
+
+    return results;
+  }
+
   document.addEventListener("astro:page-load", load_all);
 
   /**
@@ -168,6 +201,9 @@ import MainLayout from "../layouts/MainLayout.astro";
       secondIP.innerText = ipv6.data.ip;
       secondIP.classList.remove("hidden");
     }
+
+    const leak = await getDNSLeak();
+    console.log(leak);
   }
 </script>
 

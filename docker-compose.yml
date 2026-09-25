@@ -11,6 +11,7 @@ services:
       - IPV4_HOST=${IPV4_HOST}
       - IPV6_HOST=${IPV6_HOST}
       - MAIN_HOST=${MAIN_HOST}
+      - LEAK_ZONE=${DNS_ZONE:-dns.whoami.local}
       - WEB_ENV=${WEB_ENV}
     volumes:
       - ./web/caddy:/etc/caddy
