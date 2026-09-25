@@ -74,9 +74,10 @@ import MainLayout from "../layouts/MainLayout.astro";
     rdap_url: string | null;
   }
 
-  /** Estructura base de objeto de cabeceras */
-  interface Headers {
-    headers: Record<string, string>;
+  /** Estructura de resultado de fetch a cabeceras del cliente (headers + RTT) */
+  interface HeadersFetchResult {
+    headers: Record<string, string> | null;
+    rtt: number | null;
   }
 
   /** Estructura de resultado de fetch a detalle de una IP (data + RTT) */
@@ -89,8 +90,10 @@ import MainLayout from "../layouts/MainLayout.astro";
    * Mide el _Round Trip Time_ de una petición efectuada a la URL ingresada
    */
   function measureRTT(url: string): number | null {
+    const absoluteUrl = new URL(url, window.location.origin).href;
+
     const entries = performance.getEntriesByName(
-      url,
+      absoluteUrl,
       "resource",
     ) as PerformanceResourceTiming[];
     const metric = entries[entries.length - 1];
@@ -176,6 +179,32 @@ import MainLayout from "../layouts/MainLayout.astro";
     return results;
   }
 
+  /**
+   * Devuelve las cabeceras recibidas por el servidor con la medida RTT
+   * por el host actual/principal
+   */
+  async function getClientHeaders(): Promise<HeadersFetchResult> {
+    const results: HeadersFetchResult = {
+      headers: null,
+      rtt: null,
+    };
+
+    const url = "/client/headers";
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results.headers = (await res.json())["headers"];
+      results.rtt = measureRTT(url);
+    } catch (error) {}
+
+    return results;
+  }
+
+  /**
+   * Recibe un objeto que contenga información `IPDetail` o `DNSLeak` y
+   * devuelve sus atribuciones únicas (para cumplimiento de ToS de algunas fuentes)
+   */
   function readAttributions(
     data: Record<IPVersion | string, IPDetail | DNSLeak | null>,
   ): Record<string, Attributions> | null {
@@ -221,6 +250,9 @@ import MainLayout from "../layouts/MainLayout.astro";
 
     const leak = await getDNSLeak();
     console.log({ leak });
+
+    const headers = await getClientHeaders();
+    console.log({ headers });
 
     const attributions = readAttributions({
       ipv4: ipv4.data,
