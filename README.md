@@ -24,8 +24,8 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Mini refactor a Routes.
 - [x] Dedup de DNSLeak en base a ASN/Network. Añadir lista de IPs detectadas.
 - [x] Speedtest. ~~Archivo estático~~ Endpoint que genera basura para descarga y endpoint POST vacío para subida. Medición de múltiples conexiones paralelas desde el front.
+- [x] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
+- [x] Front muestra en grande IPv4, de no existir, se reemplaza por IPv6.
 - [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
-- [ ] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
 - [ ] Front pide headers por `diag.50512.dev/client/headers`.
-- [ ] Front muestra en grande IPv4, de no existir, se reemplaza por IPv6.
 - [ ] RTT se mide en el cliente, depende del front. Se mide para cada petición (`ipv4`, `ipv6`, `diag/headers`)

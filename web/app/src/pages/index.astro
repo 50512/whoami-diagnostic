@@ -151,7 +151,7 @@ import MainLayout from "../layouts/MainLayout.astro";
   async function getDNSLeak(): Promise<DNSLeak | null> {
     const test_id = crypto.randomUUID().replaceAll("-", "");
     const requests = [];
-    let results = null;
+    let results: DNSLeak | null = null;
 
     for (let i = 0; i < 10; i++) {
       const url = `https://${i}.${test_id}.${window.__ENV__.LEAK_ZONE}`;
@@ -174,6 +174,23 @@ import MainLayout from "../layouts/MainLayout.astro";
     }
 
     return results;
+  }
+
+  function readAttributions(
+    data: Record<IPVersion | string, IPDetail | DNSLeak | null>,
+  ): Record<string, Attributions> | null {
+    const attributions: Record<string, Attributions> | null = {};
+
+    Object.values(data).map((value) => {
+      if (!value || !value.attributions) return;
+      const attr_value = value.attributions;
+      Object.keys(attr_value).map((key) => {
+        if (!attr_value[key]) return;
+        attributions[key] = attr_value[key];
+      });
+    });
+
+    return attributions;
   }
 
   document.addEventListener("astro:page-load", load_all);
@@ -203,7 +220,14 @@ import MainLayout from "../layouts/MainLayout.astro";
     }
 
     const leak = await getDNSLeak();
-    console.log(leak);
+    console.log({ leak });
+
+    const attributions = readAttributions({
+      ipv4: ipv4.data,
+      ipv6: ipv6.data,
+      leak,
+    });
+    console.log({ attributions });
   }
 </script>
 
