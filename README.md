@@ -26,6 +26,7 @@ Este es un placeholder solo para saber la parte avanzada hasta el momento, confo
 - [x] Speedtest. ~~Archivo estático~~ Endpoint que genera basura para descarga y endpoint POST vacío para subida. Medición de múltiples conexiones paralelas desde el front.
 - [x] Front siempre pide `/ip/detail` para ipv4 e ipv6, se muestra ambos campos.
 - [x] Front muestra en grande IPv4, de no existir, se reemplaza por IPv6.
-- [ ] Front consulta y parsea RDAP vCard para obtener sub-asignación.
-- [ ] Front pide headers por `diag.50512.dev/client/headers`.
-- [ ] RTT se mide en el cliente, depende del front. Se mide para cada petición (`ipv4`, `ipv6`, `diag/headers`)
+- [x] Front consulta y parsea RDAP vCard para obtener sub-asignación.
+- [x] Front pide headers por `diag.50512.dev/client/headers`.
+- [x] RTT se mide en el cliente, depende del front. Se mide para cada petición (`ipv4`, `ipv6`, `diag/headers`)
+- [ ] Front muestra las secciones: IP Info (cada linea con las ips obtenidas), Sub-asignación (desde RDAP), DNS Leak (ASN Resolvers), botón de speedtest (RX/TX)
