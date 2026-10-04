@@ -16,8 +16,8 @@ import MainLayout from "../layouts/MainLayout.astro";
 
 <script src="/env.js" is:inline defer></script>
 <script>
-  import { ipv4, regex } from "astro:schema";
-
+  const HARD_TIMEOUT_MS = 8000;
+  const GRACE_MS = 1500;
   const IP_VERSIONS = ["ipv4", "ipv6"] as const;
   type IPVersion = (typeof IP_VERSIONS)[number];
 
@@ -161,17 +161,26 @@ import MainLayout from "../layouts/MainLayout.astro";
       ipv6: `https://${window.__ENV__.IPV6_HOST}/ip/detail`,
     };
 
+    const grace = new AbortController();
+    let graceTimer: number | undefined;
+
     await Promise.all(
       IP_VERSIONS.map(async (version) => {
         const url = FETCH_URLS[version];
+        const signal = AbortSignal.any([
+          grace.signal,
+          AbortSignal.timeout(HARD_TIMEOUT_MS),
+        ]);
+
         try {
-          const res = await fetch(url);
+          const res = await fetch(url, { signal });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
           const data = (await res.json()) as IPDetail;
           const rtt = measureRTT(url);
 
           results[version] = { data, rtt };
+          graceTimer ??= window.setTimeout(() => grace.abort(), GRACE_MS);
         } catch (err) {
           console.error(`Error al obtener ${version}`, err);
         }
