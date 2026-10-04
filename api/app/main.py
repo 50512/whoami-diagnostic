@@ -9,9 +9,11 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.deps import get_plain_ip
+from app.lib.bootstrap.core import BootstrapUpdater, PrefixStore
+from app.lib.bootstrap.known_resolvers import RESOLVER_SOURCES
+from app.lib.bootstrap.rdap import IANA_SOURCES
 from app.lib.geoip_utils import GeoIPManager
 from app.lib.ip_addr_utils import is_valid_ip
-from app.lib.rdap_bootstrap import BootstrapStore, BootstrapUpdater
 from app.routers import client, dns_leak, ip, meta, speed
 
 ENABLE_DOCS = str(os.getenv("ENABLE_DOCS")).lower() in ("1", "on", "enable", "true")
@@ -45,17 +47,33 @@ async def lifespan(app: FastAPI):
     await manager.start()
     app.state.geoip = manager
     app.state.redis = aioredis.from_url(REDIS_URL, decode_responses=True)
-    rdap_store = BootstrapStore()
+    rdap_store = PrefixStore()
     app.state.rdap_store = rdap_store
-    rdap_updater = BootstrapUpdater(rdap_store, data_dir=Path("/data/rdap-bootstrap"))
+    rdap_updater = BootstrapUpdater(
+        rdap_store,
+        IANA_SOURCES,
+        data_dir=Path("/data/rdap-bootstrap"),
+        logger_name="rdap",
+    )
+
+    resolvers_store = PrefixStore()
+    app.state.resolvers_store = resolvers_store
+    resolvers_updater = BootstrapUpdater(
+        resolvers_store,
+        RESOLVER_SOURCES,
+        data_dir=Path("/data/known-resolvers"),
+        logger_name="resolvers",
+    )
 
     await rdap_updater.start()
+    await resolvers_updater.start()
     try:
         yield
     finally:
         await manager.stop()
-        await rdap_updater.stop()
         await app.state.redis.aclose()
+        await rdap_updater.stop()
+        await resolvers_updater.stop()
 
 
 app = FastAPI(

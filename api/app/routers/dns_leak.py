@@ -3,9 +3,9 @@ import re
 
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
-from geoip2.database import Reader
 
 from app.lib.geoip_utils import MMDB_ATTRIBUTIONS, get_resolver_mmdb
+from app.lib.ip_addr_utils import ip_key, net_key
 
 log = logging.getLogger("fastapi.dnsleak")
 router = APIRouter(prefix="/dns-leak", tags=["dns-leak"])
@@ -44,10 +44,9 @@ async def dns_leak(test_id: str, request: Request):
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    asn_reader = request.app.state.geoip.reader("asn")
     log.debug(f"Lista de IP: {ips}")
     log.debug(f"Lista de IP ordenadas: {sorted(ips)}")
-    resolvers = get_resolvers_mmdb(ips, asn_reader)
+    resolvers = get_resolvers_mmdb(ips, request)
 
     return JSONResponse(
         {
@@ -59,32 +58,45 @@ async def dns_leak(test_id: str, request: Request):
     )
 
 
-def get_resolvers_mmdb(ips: list[str], asn_reader: Reader) -> dict:
+def get_resolvers_mmdb(ips: list[str], request: Request) -> dict:
     """
-    Itera sobre una lista de IPs y los unifica bajo ASN como identificador de resolver individual.
+    Itera sobre una lista de IPs y los unifica bajo
+    resolver conocido o ASN_ORG como identificador
+    de resolver individual.
     """
+    asn_reader = request.app.state.geoip.reader("asn")
+    resolvers_store = request.app.state.resolvers_store
     resolvers = [get_resolver_mmdb(ip, asn_reader) for ip in sorted(ips)]
 
     deduped: dict = {}
     for resolver in resolvers:
-        asn = resolver["asn"]
-        entry = deduped.get(asn)
+        asn_org = resolver["asn_org"]
+        label = resolvers_store.lookup(resolver["ip"])
+        group_key = label or asn_org or "Unknown"
+        entry = deduped.get(group_key)
 
         if entry is None:
-            log.debug(f"Creando clave asn: {asn}")
-            entry = deduped[asn] = {
-                "asn": asn,
-                "asn_org": resolver["asn_org"],
+            log.debug(f"Creando clave de grupo: {group_key}")
+            entry = deduped[group_key] = {
+                "asns": set(),
+                "asns_org": set(),
                 "ips": set(),
                 "cidrs": set(),
             }
+        if resolver["asn"] is not None:
+            entry["asns"].add(resolver["asn"])
+        if asn_org:
+            entry["asns_org"].add(asn_org)
         entry["ips"].add(resolver["ip"])
-        entry["cidrs"].add(resolver["cidr"])
+        if resolver["cidr"]:
+            entry["cidrs"].add(resolver["cidr"])
 
     log.debug(f"deduped: {deduped}")
     for entry in deduped.values():
 
-        entry["ips"] = sorted(entry["ips"])
-        entry["cidrs"] = sorted(entry["cidrs"])
+        entry["asns"] = sorted(entry["asns"])
+        entry["asns_org"] = sorted(entry["asns_org"])
+        entry["ips"] = sorted(entry["ips"], key=ip_key)
+        entry["cidrs"] = sorted(entry["cidrs"], key=net_key)
 
     return dict(sorted(deduped.items()))

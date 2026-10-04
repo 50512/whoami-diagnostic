@@ -1,7 +1,8 @@
 from fastapi import Request
 
+from app.lib.bootstrap.core import PrefixStore
+from app.lib.bootstrap.rdap import rdap_url_for
 from app.lib.geoip_utils import get_json_mmdb
-from app.lib.rdap_bootstrap import BootstrapStore
 
 ALLOWED_HEADERS = {
     "user-agent",
@@ -37,7 +38,7 @@ def get_headers(request: Request) -> dict[str, str]:
     return clean_headers
 
 
-def get_ip_detail(request: Request, rdap_store: BootstrapStore) -> dict[str, any]:
+def get_ip_detail(request: Request, rdap_store: PrefixStore) -> dict[str, any]:
     """
     Consulta en la base de datos `mmdb` los datos detallados de la IP del cliente.
     """
@@ -46,5 +47,5 @@ def get_ip_detail(request: Request, rdap_store: BootstrapStore) -> dict[str, any
     data = get_json_mmdb(
         client_ip, city_reader=manager.reader("city"), asn_reader=manager.reader("asn")
     )
-    data["rdap_url"] = rdap_store.rdap_url_for(client_ip)
+    data["rdap_url"] = rdap_url_for(rdap_store, client_ip)
     return data
