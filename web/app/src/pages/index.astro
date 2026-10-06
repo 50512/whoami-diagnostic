@@ -1,21 +1,93 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
+import { LabToggle } from "@50512/ui/inputs";
+import { JsonView } from "@50512/ui/json";
 ---
 
+<script src="/env.js" is:inline defer></script>
 <MainLayout>
   <div class="title">
     <h1>IP Diagnostic</h1>
+    <span>
+      <LabToggle
+        label="RAW"
+        label_pos="left"
+        variant="accent"
+        id="view-switch"
+      />
+    </span>
   </div>
-  <div class="header">
-    <h2 id="ip-h2">Cargando IP...</h2>
-    <h3 id="ip-h3" class="hidden">
-      Cargando IP...
-    </h3>
+
+  <div class="main-view" id="main-tab">
+    <div class="header">
+      <h2 id="ip-h2">Cargando IP...</h2>
+      <h3 id="ip-h3" class="hidden">
+        Cargando IP...
+      </h3>
+    </div>
+    <div>
+      <h2>From IP</h2>
+    </div>
+  </div>
+
+  <div class="raw-view hidden" id="raw-tab">
+    <div>
+      <h2>/ip/detail</h2>
+      <JsonView id="raw-ip-detail" collapse_depth={3} />
+    </div>
+
+    <div>
+      <h2>/client/headers</h2>
+      <JsonView id="raw-client-headers" collapse_depth={3} />
+    </div>
+
+    <div>
+      <h2>/dns-leak/{"{token}"}</h2>
+      <JsonView id="raw-dns-leak" collapse_depth={2} />
+    </div>
+
+    <div>
+      <h2>RDAP-Registrant</h2>
+      <JsonView id="raw-registrant-rdap" collapse_depth={3} />
+    </div>
+
+    <div>
+      <h2>Raw RDAP</h2>
+      <JsonView id="raw-rdap" collapse_depth={3} />
+    </div>
   </div>
 </MainLayout>
 
-<script src="/env.js" is:inline defer></script>
+<!-- SWITCH VIEWS -->
 <script>
+  document.addEventListener("astro:page-load", () => {
+    const mainTab = document.getElementById("main-tab");
+    const rawTab = document.getElementById("raw-tab");
+    const switchTab = document.getElementById(
+      "view-switch",
+    ) as HTMLInputElement;
+    if (!mainTab || !rawTab || !switchTab) return;
+
+    const updateView = () => {
+      if (switchTab.checked) {
+        mainTab.classList.add("hidden");
+        rawTab.classList.remove("hidden");
+      } else {
+        mainTab.classList.remove("hidden");
+        rawTab.classList.add("hidden");
+      }
+    };
+
+    updateView();
+    switchTab.addEventListener("input", () => {
+      updateView();
+    });
+  });
+</script>
+
+<script>
+  import type { JsonViewElement } from "@50512/ui/json";
+
   const HARD_TIMEOUT_MS = 8000;
   const GRACE_MS = 1500;
   const IP_VERSIONS = ["ipv4", "ipv6"] as const;
@@ -50,8 +122,8 @@ import MainLayout from "../layouts/MainLayout.astro";
 
   /** Estructura de información de los resolvers detectados por DNS leak */
   interface ResolverInfo {
-    asn: number | null;
-    asn_org: string | null;
+    asns: Array<number> | null;
+    asns_org: Array<string> | null;
     ips: Array<string> | null;
     cidrs: Array<string> | null;
   }
@@ -121,6 +193,12 @@ import MainLayout from "../layouts/MainLayout.astro";
     entities: Array<RDAPEntity> | null;
   }
 
+  /** Resultados de peticiones hacia RDAP */
+  interface RDAPFetchResults {
+    data: RDAPResponse | null;
+    url: string | null;
+  }
+
   /**
    * Mide el _Round Trip Time_ de una petición efectuada a la URL ingresada
    */
@@ -187,7 +265,6 @@ import MainLayout from "../layouts/MainLayout.astro";
       }),
     );
 
-    console.log(results);
     return results;
   }
 
@@ -211,7 +288,6 @@ import MainLayout from "../layouts/MainLayout.astro";
     }
 
     await Promise.allSettled(requests);
-    console.log("Leak id:", test_id);
 
     try {
       const res = await fetch(`/dns-leak/${test_id}`);
@@ -221,7 +297,6 @@ import MainLayout from "../layouts/MainLayout.astro";
       console.error(`Error al obtener los resultados: ${err}`);
     }
 
-    console.log(results);
     return results;
   }
 
@@ -244,7 +319,6 @@ import MainLayout from "../layouts/MainLayout.astro";
       results.rtt = measureRTT(url);
     } catch (error) {}
 
-    console.log(results);
     return results;
   }
 
@@ -326,11 +400,11 @@ import MainLayout from "../layouts/MainLayout.astro";
   }
 
   /**
-   * Regresa la información de RDAP acotada al uso de este script.
+   * Extrae de la respuesta original el RDAP Net y RDAP Registrant
    */
-  async function getRDAPinfo(
-    data: Record<IPVersion, IPDetail | null>,
-  ): Promise<Record<IPVersion, RDAPInfo>> {
+  function extractRDAP(
+    rdapRaw: Record<IPVersion, RDAPFetchResults>,
+  ): Record<IPVersion, RDAPInfo> {
     const results: Record<IPVersion, RDAPInfo> = {
       ipv4: {
         registrant: null,
@@ -342,6 +416,32 @@ import MainLayout from "../layouts/MainLayout.astro";
       },
     };
 
+    IP_VERSIONS.map(async (version) => {
+      const currentVersion = rdapRaw[version];
+      if (!currentVersion || !currentVersion.data) return;
+      try {
+        results[version].registrant = extractRDAPRegistrant(
+          currentVersion.data,
+        );
+        results[version].network = extractRDAPNetwork(currentVersion.data);
+      } catch (err) {
+        console.error(`No se pudo obtener RDAP de ${version}: ${err}`);
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Regresa el RDAP completo de las IPs
+   */
+  async function getRDAPinfo(
+    data: Record<IPVersion, IPDetail | null>,
+  ): Promise<Record<IPVersion, RDAPFetchResults>> {
+    const results: Record<IPVersion, RDAPFetchResults> = {
+      ipv4: { data: null, url: null },
+      ipv6: { data: null, url: null },
+    };
     await Promise.all(
       IP_VERSIONS.map(async (version) => {
         const currentVersion = data[version];
@@ -352,16 +452,13 @@ import MainLayout from "../layouts/MainLayout.astro";
           const res = await fetch(url);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-          const json = (await res.json()) as RDAPResponse;
-
-          results[version].registrant = extractRDAPRegistrant(json);
-          results[version].network = extractRDAPNetwork(json);
+          results[version].url = url;
+          results[version].data = (await res.json()) as RDAPResponse;
         } catch (err) {
           console.error(`No se pudo obtener RDAP de ${version}: ${err}`);
         }
       }),
     );
-    console.log(results);
     return results;
   }
 
@@ -402,7 +499,7 @@ import MainLayout from "../layouts/MainLayout.astro";
       ipv6: ipv6.data,
     });
 
-    const [headers, leak, rdap] = await Promise.all([
+    const [headers, leak, rdapRaw] = await Promise.all([
       headersPromise,
       leakPromise,
       rdapPromise,
@@ -412,27 +509,56 @@ import MainLayout from "../layouts/MainLayout.astro";
       ipv6: ipv6.data,
       leak,
     });
-    console.log({ attributions });
+    const rdapInfo = extractRDAP(rdapRaw);
+
+    render_raw({ ipv4, ipv6 }, headers, leak, rdapRaw, rdapInfo);
+  }
+
+  function render_raw(
+    detailedIPs: Record<IPVersion, IPFetchResult>,
+    headers: HeadersFetchResult,
+    leak: DNSLeak | null,
+    rdap: Record<IPVersion, RDAPFetchResults>,
+    rdapInfo: Record<IPVersion, RDAPInfo>,
+  ) {
+    const detailElement = document.getElementById(
+      "raw-ip-detail",
+    ) as JsonViewElement | null;
+
+    const clientHeaders = document.getElementById(
+      "raw-client-headers",
+    ) as JsonViewElement | null;
+
+    const dnsLeakElement = document.getElementById(
+      "raw-dns-leak",
+    ) as JsonViewElement | null;
+
+    const registrantRdapElement = document.getElementById(
+      "raw-registrant-rdap",
+    ) as JsonViewElement | null;
+
+    const rdapElement = document.getElementById(
+      "raw-rdap",
+    ) as JsonViewElement | null;
+
+    if (
+      !detailElement ||
+      !clientHeaders ||
+      !dnsLeakElement ||
+      !registrantRdapElement ||
+      !rdapElement
+    )
+      return;
+
+    detailElement.data = detailedIPs;
+    clientHeaders.data = headers;
+    dnsLeakElement.data = leak;
+    registrantRdapElement.data = rdapInfo;
+    rdapElement.data = rdap;
   }
 </script>
 
 <style>
-  .header {
-    border-bottom: var(--border-dashed);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  h3,
-  h2 {
-    text-align: center;
-    overflow-wrap: anywhere;
-    max-width: 100%;
-  }
-  h3.hidden {
-    display: none;
-  }
-
   .title {
     position: relative;
     display: flex;
@@ -448,5 +574,36 @@ import MainLayout from "../layouts/MainLayout.astro";
       position: absolute;
       top: -50px;
     }
+    span {
+      position: absolute;
+      right: var(--space-1);
+    }
+  }
+
+  .header {
+    border-bottom: var(--border-dashed);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--space-1);
+  }
+  #ip-h3,
+  #ip-h2 {
+    text-align: center;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .raw-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    h2 {
+      font-family: var(--font-mono);
+    }
+  }
+
+  .hidden {
+    display: none;
   }
 </style>
