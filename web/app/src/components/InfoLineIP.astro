@@ -1,0 +1,66 @@
+---
+interface Props {
+  name: string;
+  id: string;
+}
+
+const { name, id } = Astro.props;
+---
+
+<div class="info-line">
+  <h4>{name}</h4>
+  <div class="ip-info-block" {id}>
+    <span class="code placeholder">...</span>
+    <span class="code ipv4 hidden">
+      IPv4: <span class="ip-content">...</span>
+    </span>
+    <span class="code ipv6 hidden">
+      IPv6: <span class="ip-content">...</span>
+    </span>
+    <span class="code client hidden">...</span>
+  </div>
+</div>
+<style>
+  .info-line {
+    display: flex;
+    flex-direction: row;
+    min-height: var(--space-7);
+    justify-content: space-between;
+    gap: var(--space-4);
+    max-width: 100%;
+    overflow: hidden;
+
+    h4 {
+      margin: auto 0;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  }
+
+  .ip-info-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    flex: 1;
+
+    min-width: 0;
+    overflow-x: auto;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-2) var(--surface-1);
+
+    span {
+      min-width: 100%;
+      width: max-content;
+      text-align: right;
+
+      margin: auto 0;
+      white-space: nowrap;
+    }
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
