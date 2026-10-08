@@ -580,14 +580,14 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     const locationElement = document.querySelector(
       `#loc-block>.${version}>.ip-content`,
     ) as HTMLSpanElement | null;
-    if (!latitude || !longitude || !locationElement) return;
+    if (latitude == null || longitude == null || !locationElement) return;
 
     const url = genLinkOSM(latitude, longitude, accuracy_radius);
 
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.target = "_blank";
-    anchor.textContent = `${latitude}, ${longitude} ±${accuracy_radius}Km`;
+    anchor.textContent = `${latitude}, ${longitude} ±${accuracy_radius ?? 50}Km`;
     anchor.classList.add("location-link");
 
     locationElement.replaceChildren(anchor);
@@ -622,9 +622,11 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     accuracy_radius: number | null,
   ): string {
     const radius = accuracy_radius ?? 50;
-    const zoom = Math.max(1, Math.min(19, Math.round(18 - Math.log2(radius))));
-
-    return `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=${zoom}/${latitude}/${longitude}`;
+    const cosLat = Math.max(Math.cos((latitude * Math.PI) / 180), 0.01);
+    const params = new URLSearchParams({
+      geouri: `geo:${latitude},${longitude};u=${radius * 1000}`,
+    });
+    return `https://www.openstreetmap.org/?${params}`;
   }
 
   /**
