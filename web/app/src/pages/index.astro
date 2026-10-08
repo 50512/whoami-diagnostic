@@ -35,7 +35,8 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       <InfoLineIP name="ZIP CODE" id="zip-block" />
     </div>
     <div>
-      <small class="attributions" id="attributions"></small>
+      <small class="footer" id="metadata"></small>
+      <small class="footer" id="attributions"></small>
     </div>
   </div>
 
@@ -47,6 +48,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       collapse_depth={3}
     />
     <RawCard title="/dns-leak/{token}" id="raw-dns-leak" collapse_depth={2} />
+    <RawCard title="/info" id="raw-metadata" />
     <RawCard
       title="RDAP-Registrant"
       id="raw-registrant-rdap"
@@ -197,6 +199,13 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     url: string | null;
   }
 
+  /** Interfaz de `/info` de la API */
+  interface MetaAPI {
+    status: string;
+    asn_last_update: string;
+    city_last_update: string;
+  }
+
   // --------- DATA EXTRACTION --------
 
   /**
@@ -213,10 +222,25 @@ import InfoLineIP from "../components/InfoLineIP.astro";
 
     if (!metric) return null;
 
-    if (metric.responseStart > 0 && metric.requestStart > 0) {
+    if (metric.responseStart > 0 && metric.requestStart > 0)
       return Math.round(metric.responseStart - metric.requestStart);
-    }
+
     return null;
+  }
+
+  /**
+   * Obtiene la metadata de la API (estado y última actualización)
+   */
+  async function getMetaAPI(): Promise<MetaAPI | null> {
+    let results: MetaAPI | null = null;
+
+    try {
+      const res = await fetch("/info");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      results = (await res.json()) as MetaAPI;
+    } catch (error) {}
+
+    return results;
   }
 
   /**
@@ -359,9 +383,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       const attributes = relevantEntity.vcardArray[1];
       const attrName = attributes.find((attr) => attr[0] == "fn");
 
-      if (attrName && attrName[3]) {
-        registrant = (attrName[3] as string).trim();
-      }
+      if (attrName && attrName[3]) registrant = (attrName[3] as string).trim();
     }
 
     return registrant;
@@ -376,9 +398,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     if (info.cidr0_cidrs && info.cidr0_cidrs.length > 0) {
       const block = info.cidr0_cidrs[0];
       const ipBase = block.v4prefix || block.v6prefix;
-      if (ipBase && block.length) {
-        return `${ipBase}/${block.length}`;
-      }
+      if (ipBase && block.length) return `${ipBase}/${block.length}`;
     }
 
     // Fallback
@@ -392,9 +412,8 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       if (match) return match[0];
     }
 
-    if (info.startAddress && info.endAddress) {
+    if (info.startAddress && info.endAddress)
       return `${info.startAddress} - ${info.endAddress}`;
-    }
 
     return network;
   }
@@ -472,6 +491,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     const ipPromise = fetchIPDetails();
     const headersPromise = getClientHeaders();
     const leakPromise = getDNSLeak();
+    const metadataPromise = getMetaAPI();
 
     const { ipv4, ipv6 } = await ipPromise;
 
@@ -484,10 +504,11 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       ipv6: ipv6.data,
     });
 
-    const [headers, leak, rdapRaw] = await Promise.all([
+    const [headers, leak, rdapRaw, metadata] = await Promise.all([
       headersPromise,
       leakPromise,
       rdapPromise,
+      metadataPromise,
     ]);
     const attributions = readAttributions({
       ipv4: ipv4.data,
@@ -496,9 +517,8 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     });
     const rdapInfo = extractRDAP(rdapRaw);
 
-    if (attributions) {
-      render_attributions(attributions);
-    }
+    if (attributions) render_attributions(attributions);
+    if (metadata) render_metadata(metadata);
     render_raw(headers, leak, rdapRaw, rdapInfo);
   }
 
@@ -508,12 +528,11 @@ import InfoLineIP from "../components/InfoLineIP.astro";
    * Plantilla de bloques de IP info simples
    */
   const propertyTemplates: Record<string, (data: IPDetail) => string> = {
-    "asn-block": (data) =>
-      (data.asn ? `AS${data.asn}` : "N/A") + " - " + (data.asn_org ?? "N/A"),
-    "cidr-block": (data) => data.cidr ?? "N/A",
+    "asn-block": (data) => `AS${data.asn ?? "-"} - ${data.asn_org ?? ""}`,
+    "cidr-block": (data) => data.cidr ?? "-",
     "geo-block": (data) =>
-      `${data.geolocation.country.name ?? "N/A"}/${data.geolocation.region ?? "N/A"}/${data.geolocation.city ?? "N/A"}`,
-    "zip-block": (data) => data.geolocation.zip_code ?? "N/A",
+      `${data.geolocation.country.name ?? "-"}/${data.geolocation.region ?? "-"}/${data.geolocation.city ?? "-"}`,
+    "zip-block": (data) => data.geolocation.zip_code ?? "-",
   };
 
   /**
@@ -526,15 +545,12 @@ import InfoLineIP from "../components/InfoLineIP.astro";
 
     if (!mainIP || !secondIP) return;
     // Si no hay IPv4, se pone IPv6 en principal
-    if (ipv4.data) {
-      mainIP.innerText = ipv4.data.ip;
-    } else if (ipv6.data) {
-      mainIP.innerText = ipv6.data.ip;
-    }
+    if (ipv4.data) mainIP.textContent = ipv4.data.ip;
+    else if (ipv6.data) mainIP.textContent = ipv6.data.ip;
 
     // Si hay IPv4 e IPv6, pone la IPv6 en la 2da linea
     if (ipv6.data && ipv4.data) {
-      secondIP.innerText = ipv6.data.ip;
+      secondIP.textContent = ipv6.data.ip;
       secondIP.classList.remove("hidden");
     }
   }
@@ -543,6 +559,11 @@ import InfoLineIP from "../components/InfoLineIP.astro";
    * Escribe toda la info de IP
    */
   function render_ip_info(data: Record<IPVersion, IPFetchResult>) {
+    const rawElement = document.getElementById(
+      "raw-ip-detail",
+    ) as JsonViewElement | null;
+    if (rawElement) rawElement.data = data;
+
     document
       .querySelectorAll(".ip-info-block>.placeholder")
       .forEach((ele) => ele.classList.add("hidden"));
@@ -566,10 +587,6 @@ import InfoLineIP from "../components/InfoLineIP.astro";
 
       render_location(currentDetail, version);
     });
-    const detailElement = document.getElementById(
-      "raw-ip-detail",
-    ) as JsonViewElement | null;
-    if (detailElement) detailElement.data = data;
   }
 
   /**
@@ -580,7 +597,10 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     const locationElement = document.querySelector(
       `#loc-block>.${version}>.ip-content`,
     ) as HTMLSpanElement | null;
-    if (latitude == null || longitude == null || !locationElement) return;
+
+    if (!locationElement) return;
+    if (latitude == null || longitude == null)
+      return locationElement.replaceChildren("-");
 
     const url = genLinkOSM(latitude, longitude, accuracy_radius);
 
@@ -591,6 +611,39 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     anchor.classList.add("location-link");
 
     locationElement.replaceChildren(anchor);
+  }
+
+  /**
+   * Escribe el small inferior de metadata
+   */
+  function render_metadata(data: MetaAPI) {
+    const rawElement = document.getElementById(
+      "raw-metadata",
+    ) as JsonViewElement | null;
+
+    if (rawElement) rawElement.data = data;
+
+    const metaEle = document.getElementById("metadata");
+    if (!metaEle) return;
+
+    const ele = document.createElement("span");
+    ele.textContent = "Datos: ";
+
+    Object.entries(data).forEach(([k, v]) => {
+      if (k == "status") return;
+
+      const name = k.split("_")[0].toUpperCase();
+      const date = new Date(v);
+
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+
+      ele.textContent += `${name}-${year}.${month}.${day} `;
+      ele.classList.add("micro");
+    });
+
+    metaEle.replaceChildren(ele);
   }
 
   /**
@@ -622,7 +675,6 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     accuracy_radius: number | null,
   ): string {
     const radius = accuracy_radius ?? 50;
-    const cosLat = Math.max(Math.cos((latitude * Math.PI) / 180), 0.01);
     const params = new URLSearchParams({
       geouri: `geo:${latitude},${longitude};u=${radius * 1000}`,
     });
@@ -725,10 +777,17 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     gap: var(--space-4);
   }
 
-  .attributions {
-    display: flex;
+  #attributions {
     flex-direction: column;
+  }
 
+  #metadata {
+    gap: 1ch;
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
     font-size: var(--fs-micro);
     font-style: italic;
     line-height: var(--lh-micro);
