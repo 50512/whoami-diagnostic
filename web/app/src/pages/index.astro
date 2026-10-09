@@ -631,7 +631,7 @@ import InfoLine from "../components/InfoLine.astro";
   }
 
   /**
-   * Escribe la data de RDAP
+   * Escribe la data de RDAP (bloque procesado e información cruda)
    */
   function render_rdap(rdap: Record<IPVersion, RDAPFetchResults>) {
     const rawElement = document.getElementById(
@@ -650,7 +650,10 @@ import InfoLine from "../components/InfoLine.astro";
       .forEach((ele) => ele.classList.add("hidden"));
 
     IP_VERSIONS.forEach((version) => {
+      const currentDataRaw = rdap[version].data;
       const currentDetail = rdapInfo[version];
+
+      if (!currentDataRaw) return;
 
       document
         .querySelectorAll(`.rdap-info-block>.${version}`)
