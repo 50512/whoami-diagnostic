@@ -2,20 +2,21 @@
 interface Props {
   name: string;
   id: string;
+  class?: string;
 }
 
-const { name, id } = Astro.props;
+const { name, id, class: className } = Astro.props;
 ---
 
 <div class="info-line">
   <h4>{name}</h4>
-  <div class="ip-info-block" {id}>
+  <div class:list={["info-block", className]} {id}>
     <span class="code placeholder">...</span>
     <span class="code ipv4 hidden">
-      IPv4: <span class="ip-content">...</span>
+      IPv4: <span class="block-content">...</span>
     </span>
     <span class="code ipv6 hidden">
-      IPv6: <span class="ip-content">...</span>
+      IPv6: <span class="block-content">...</span>
     </span>
     <span class="code client hidden">...</span>
   </div>
@@ -37,7 +38,7 @@ const { name, id } = Astro.props;
     }
   }
 
-  .ip-info-block {
+  .info-block {
     display: flex;
     flex-direction: column;
     justify-content: space-between;

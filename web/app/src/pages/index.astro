@@ -2,7 +2,7 @@
 import MainLayout from "../layouts/MainLayout.astro";
 import { LabToggle } from "@50512/ui/inputs";
 import RawCard from "../components/RawCard.astro";
-import InfoLineIP from "../components/InfoLineIP.astro";
+import InfoLine from "../components/InfoLine.astro";
 ---
 
 <script src="/env.js" is:inline defer></script>
@@ -28,11 +28,20 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     </div>
     <div>
       <h2 class="info-title">IP info</h2>
-      <InfoLineIP name="ASN" id="asn-block" />
-      <InfoLineIP name="CIDR" id="cidr-block" />
-      <InfoLineIP name="GEO" id="geo-block" />
-      <InfoLineIP name="LOCATION" id="loc-block" />
-      <InfoLineIP name="ZIP CODE" id="zip-block" />
+      <InfoLine name="ASN" id="asn-block" class="ip-info-block" />
+      <InfoLine name="CIDR" id="cidr-block" class="ip-info-block" />
+      <InfoLine name="GEO" id="geo-block" class="ip-info-block" />
+      <InfoLine name="LOCATION" id="loc-block" class="ip-info-block" />
+      <InfoLine name="ZIP CODE" id="zip-block" class="ip-info-block" />
+    </div>
+    <div>
+      <h2 class="info-title">RDAP info</h2>
+      <InfoLine
+        name="REGISTRANT"
+        id="registrant-block"
+        class="rdap-info-block"
+      />
+      <InfoLine name="RDAP NET" id="rdap-net-block" class="rdap-info-block" />
     </div>
     <div>
       <small class="footer" id="metadata"></small>
@@ -469,9 +478,9 @@ import InfoLineIP from "../components/InfoLineIP.astro";
 
         try {
           const res = await fetch(url);
+          results[version].url = url;
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-          results[version].url = url;
           results[version].data = (await res.json()) as RDAPResponse;
         } catch (err) {
           console.error(`No se pudo obtener RDAP de ${version}: ${err}`);
@@ -515,11 +524,11 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       ipv6: ipv6.data,
       leak,
     });
-    const rdapInfo = extractRDAP(rdapRaw);
 
     if (attributions) render_attributions(attributions);
     if (metadata) render_metadata(metadata);
-    render_raw(headers, leak, rdapRaw, rdapInfo);
+    render_rdap(rdapRaw);
+    render_raw(headers, leak);
   }
 
   // --------- RENDER ---------
@@ -527,12 +536,20 @@ import InfoLineIP from "../components/InfoLineIP.astro";
   /**
    * Plantilla de bloques de IP info simples
    */
-  const propertyTemplates: Record<string, (data: IPDetail) => string> = {
+  const propertyTemplatesIP: Record<string, (data: IPDetail) => string> = {
     "asn-block": (data) => `AS${data.asn ?? "-"} - ${data.asn_org ?? ""}`,
     "cidr-block": (data) => data.cidr ?? "-",
     "geo-block": (data) =>
       `${data.geolocation.country.name ?? "-"}/${data.geolocation.region ?? "-"}/${data.geolocation.city ?? "-"}`,
     "zip-block": (data) => data.geolocation.zip_code ?? "-",
+  };
+
+  /**
+   * Plantilla de bloques de IP info simples
+   */
+  const propertyTemplatesRDAP: Record<string, (data: RDAPInfo) => string> = {
+    "registrant-block": (data) => data.registrant ?? "-",
+    "rdap-net-block": (data) => data.network ?? "-",
   };
 
   /**
@@ -578,9 +595,9 @@ import InfoLineIP from "../components/InfoLineIP.astro";
         .forEach((ele) => ele.classList.remove("hidden"));
 
       // Ejecuta las templates en cada bloque
-      Object.entries(propertyTemplates).forEach(([id, formatter]) => {
+      Object.entries(propertyTemplatesIP).forEach(([id, formatter]) => {
         const target = document.querySelector(
-          `#${id}>.${version}>.ip-content`,
+          `#${id}>.${version}>.block-content`,
         ) as HTMLSpanElement | null;
         if (target) target.textContent = formatter(currentDetail);
       });
@@ -595,7 +612,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
   function render_location(data: IPDetail, version: IPVersion) {
     const { latitude, longitude, accuracy_radius } = data.location;
     const locationElement = document.querySelector(
-      `#loc-block>.${version}>.ip-content`,
+      `#loc-block>.${version}>.block-content`,
     ) as HTMLSpanElement | null;
 
     if (!locationElement) return;
@@ -611,6 +628,42 @@ import InfoLineIP from "../components/InfoLineIP.astro";
     anchor.classList.add("location-link");
 
     locationElement.replaceChildren(anchor);
+  }
+
+  /**
+   * Escribe la data de RDAP
+   */
+  function render_rdap(rdap: Record<IPVersion, RDAPFetchResults>) {
+    const rawElement = document.getElementById(
+      "raw-rdap",
+    ) as JsonViewElement | null;
+    const rawInfoElement = document.getElementById(
+      "raw-registrant-rdap",
+    ) as JsonViewElement | null;
+
+    const rdapInfo = extractRDAP(rdap);
+    if (rawElement) rawElement.data = rdap;
+    if (rawInfoElement) rawInfoElement.data = rdapInfo;
+
+    document
+      .querySelectorAll(".rdap-info-block>.placeholder")
+      .forEach((ele) => ele.classList.add("hidden"));
+
+    IP_VERSIONS.forEach((version) => {
+      const currentDetail = rdapInfo[version];
+
+      document
+        .querySelectorAll(`.rdap-info-block>.${version}`)
+        .forEach((ele) => ele.classList.remove("hidden"));
+
+      // Ejecuta las templates en cada bloque
+      Object.entries(propertyTemplatesRDAP).forEach(([id, formatter]) => {
+        const target = document.querySelector(
+          `#${id}>.${version}>.block-content`,
+        ) as HTMLSpanElement | null;
+        if (target) target.textContent = formatter(currentDetail);
+      });
+    });
   }
 
   /**
@@ -684,12 +737,7 @@ import InfoLineIP from "../components/InfoLineIP.astro";
   /**
    * Carga los JSON a la vista cruda
    */
-  function render_raw(
-    headers: HeadersFetchResult,
-    leak: DNSLeak | null,
-    rdap: Record<IPVersion, RDAPFetchResults>,
-    rdapInfo: Record<IPVersion, RDAPInfo>,
-  ) {
+  function render_raw(headers: HeadersFetchResult, leak: DNSLeak | null) {
     const clientHeaders = document.getElementById(
       "raw-client-headers",
     ) as JsonViewElement | null;
@@ -698,26 +746,10 @@ import InfoLineIP from "../components/InfoLineIP.astro";
       "raw-dns-leak",
     ) as JsonViewElement | null;
 
-    const registrantRdapElement = document.getElementById(
-      "raw-registrant-rdap",
-    ) as JsonViewElement | null;
-
-    const rdapElement = document.getElementById(
-      "raw-rdap",
-    ) as JsonViewElement | null;
-
-    if (
-      !clientHeaders ||
-      !dnsLeakElement ||
-      !registrantRdapElement ||
-      !rdapElement
-    )
-      return;
+    if (!clientHeaders || !dnsLeakElement) return;
 
     clientHeaders.data = headers;
     dnsLeakElement.data = leak;
-    registrantRdapElement.data = rdapInfo;
-    rdapElement.data = rdap;
   }
 </script>
 
