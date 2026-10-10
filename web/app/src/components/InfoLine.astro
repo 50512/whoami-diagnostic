@@ -25,7 +25,7 @@ const { name, id, class: className } = Astro.props;
   .info-line {
     display: flex;
     flex-direction: row;
-    min-height: var(--space-7);
+    height: var(--space-7);
     justify-content: space-between;
     gap: var(--space-4);
     max-width: 100%;
@@ -36,6 +36,10 @@ const { name, id, class: className } = Astro.props;
       flex-shrink: 0;
       white-space: nowrap;
     }
+  }
+
+  .info-line:has(.client-info-block) {
+    height: var(--space-7);
   }
 
   .info-block {

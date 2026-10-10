@@ -26,7 +26,9 @@ import InfoLine from "../components/InfoLine.astro";
         Cargando IP...
       </h3>
     </div>
-    <div>
+
+    <!-- IP INFO -->
+    <div class="info-container">
       <h2 class="info-title">IP info</h2>
       <InfoLine name="ASN" id="asn-block" class="ip-info-block" />
       <InfoLine name="CIDR" id="cidr-block" class="ip-info-block" />
@@ -34,7 +36,9 @@ import InfoLine from "../components/InfoLine.astro";
       <InfoLine name="LOCATION" id="loc-block" class="ip-info-block" />
       <InfoLine name="ZIP CODE" id="zip-block" class="ip-info-block" />
     </div>
-    <div>
+
+    <!-- RDAP INFO -->
+    <div class="info-container">
       <h2 class="info-title">RDAP info</h2>
       <InfoLine
         name="REGISTRANT"
@@ -43,6 +47,25 @@ import InfoLine from "../components/InfoLine.astro";
       />
       <InfoLine name="RDAP NET" id="rdap-net-block" class="rdap-info-block" />
     </div>
+
+    <!-- CLIENT INFO -->
+    <div class="info-container client">
+      <h2 class="info-title">Client headers</h2>
+      <InfoLine name="USER-AGENT" id="ua-block" class="client-info-block" />
+      <InfoLine name="LANGUAGE" id="language-block" class="client-info-block" />
+      <InfoLine
+        name="CLIENT-HINT UA"
+        id="sec-ch-ua-block"
+        class="client-info-block"
+      />
+      <InfoLine
+        name="PLATFORM"
+        id="sec-ch-ua-platform-block"
+        class="client-info-block"
+      />
+    </div>
+
+    <!-- CARD FOOTER -->
     <div>
       <small class="footer" id="metadata"></small>
       <small class="footer" id="attributions"></small>
@@ -157,9 +180,18 @@ import InfoLine from "../components/InfoLine.astro";
     rdap_url: string | null;
   }
 
+  /** Estructura de los headers usados en el front */
+  interface HeadersInfo {
+    "user-agent"?: string;
+    "accept-language"?: string;
+    "sec-ch-ua"?: string;
+    "sec-ch-ua-platform"?: string;
+    [key: string]: string | undefined;
+  }
+
   /** Estructura de resultado de fetch a cabeceras del cliente (headers + RTT) */
   interface HeadersFetchResult {
-    headers: Record<string, string> | null;
+    headers: HeadersInfo | null;
     rtt: number | null;
   }
 
@@ -350,7 +382,9 @@ import InfoLine from "../components/InfoLine.astro";
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       results.headers = (await res.json())["headers"];
       results.rtt = measureRTT(url);
-    } catch (error) {}
+    } catch (err) {
+      console.error(`Error al obtener las cabeceras: ${err}`);
+    }
 
     return results;
   }
@@ -527,8 +561,9 @@ import InfoLine from "../components/InfoLine.astro";
 
     if (attributions) render_attributions(attributions);
     if (metadata) render_metadata(metadata);
+    render_headers(headers);
     render_rdap(rdapRaw);
-    render_raw(headers, leak);
+    render_raw(leak);
   }
 
   // --------- RENDER ---------
@@ -545,11 +580,33 @@ import InfoLine from "../components/InfoLine.astro";
   };
 
   /**
-   * Plantilla de bloques de IP info simples
+   * Plantilla de bloques de RDAP procesado
    */
   const propertyTemplatesRDAP: Record<string, (data: RDAPInfo) => string> = {
     "registrant-block": (data) => data.registrant ?? "-",
     "rdap-net-block": (data) => data.network ?? "-",
+  };
+
+  /**
+   * Plantilla de bloques de cabeceras
+   */
+  const headersTemplates: Record<string, (data: HeadersInfo) => string> = {
+    "ua-block": (data) => data["user-agent"] ?? "-",
+
+    "language-block": (data) =>
+      data["accept-language"]
+        ?.split(",")
+        .map((lang) => lang.split(";")[0].trim())
+        .join(", ") ?? "-",
+
+    "sec-ch-ua-block": (data) =>
+      data["sec-ch-ua"]
+        ?.replaceAll('"', "")
+        .replaceAll(";", " ")
+        .replaceAll("=", "") ?? "-",
+
+    "sec-ch-ua-platform-block": (data) =>
+      data["sec-ch-ua-platform"]?.replaceAll('"', "") ?? "-",
   };
 
   /**
@@ -670,6 +727,34 @@ import InfoLine from "../components/InfoLine.astro";
   }
 
   /**
+   * Escribe las cabeceras
+   */
+  function render_headers(headers: HeadersFetchResult) {
+    const clientHeaders = document.getElementById(
+      "raw-client-headers",
+    ) as JsonViewElement | null;
+
+    if (clientHeaders) clientHeaders.data = headers;
+
+    document
+      .querySelectorAll(".client-info-block>.placeholder")
+      .forEach((ele) => ele.classList.add("hidden"));
+
+    document
+      .querySelectorAll(`.client-info-block>.client`)
+      .forEach((ele) => ele.classList.remove("hidden"));
+
+    Object.entries(headersTemplates).forEach(([id, formatter]) => {
+      const target = document.querySelector(
+        `#${id}>.client`,
+      ) as HTMLSpanElement | null;
+      if (target)
+        target.textContent =
+          headers.headers != null ? formatter(headers.headers) : "-";
+    });
+  }
+
+  /**
    * Escribe el small inferior de metadata
    */
   function render_metadata(data: MetaAPI) {
@@ -740,18 +825,13 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Carga los JSON a la vista cruda
    */
-  function render_raw(headers: HeadersFetchResult, leak: DNSLeak | null) {
-    const clientHeaders = document.getElementById(
-      "raw-client-headers",
-    ) as JsonViewElement | null;
-
+  function render_raw(leak: DNSLeak | null) {
     const dnsLeakElement = document.getElementById(
       "raw-dns-leak",
     ) as JsonViewElement | null;
 
-    if (!clientHeaders || !dnsLeakElement) return;
+    if (!dnsLeakElement) return;
 
-    clientHeaders.data = headers;
     dnsLeakElement.data = leak;
   }
 </script>
@@ -810,6 +890,10 @@ import InfoLine from "../components/InfoLine.astro";
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .info-container.client {
+    margin: var(--space-1) 0;
   }
 
   #attributions {
