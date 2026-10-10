@@ -67,7 +67,7 @@ import InfoLine from "../components/InfoLine.astro";
 
     <!-- CARD FOOTER -->
     <div>
-      <small class="footer" id="metadata"></small>
+      <small class="footer micro" id="metadata"></small>
       <small class="footer" id="attributions"></small>
     </div>
   </div>
@@ -563,7 +563,7 @@ import InfoLine from "../components/InfoLine.astro";
     if (metadata) render_metadata(metadata);
     render_headers(headers);
     render_rdap(rdapRaw);
-    render_raw(leak);
+    render_leak(leak);
   }
 
   // --------- RENDER ---------
@@ -755,6 +755,17 @@ import InfoLine from "../components/InfoLine.astro";
   }
 
   /**
+   * Carga los JSON a la vista cruda
+   */
+  function render_leak(leak: DNSLeak | null) {
+    const dnsLeakElement = document.getElementById(
+      "raw-dns-leak",
+    ) as JsonViewElement | null;
+
+    if (dnsLeakElement) dnsLeakElement.data = leak;
+  }
+
+  /**
    * Escribe el small inferior de metadata
    */
   function render_metadata(data: MetaAPI) {
@@ -767,8 +778,7 @@ import InfoLine from "../components/InfoLine.astro";
     const metaEle = document.getElementById("metadata");
     if (!metaEle) return;
 
-    const ele = document.createElement("span");
-    ele.textContent = "Datos: ";
+    let text = "Datos: ";
 
     Object.entries(data).forEach(([k, v]) => {
       if (k == "status") return;
@@ -780,11 +790,10 @@ import InfoLine from "../components/InfoLine.astro";
       const month = String(date.getUTCMonth() + 1).padStart(2, "0");
       const day = String(date.getUTCDate()).padStart(2, "0");
 
-      ele.textContent += `${name}-${year}.${month}.${day} `;
-      ele.classList.add("micro");
+      text += `${name}-${year}.${month}.${day} `;
     });
 
-    metaEle.replaceChildren(ele);
+    metaEle.textContent = text;
   }
 
   /**
@@ -820,19 +829,6 @@ import InfoLine from "../components/InfoLine.astro";
       geouri: `geo:${latitude},${longitude};u=${radius * 1000}`,
     });
     return `https://www.openstreetmap.org/?${params}`;
-  }
-
-  /**
-   * Carga los JSON a la vista cruda
-   */
-  function render_raw(leak: DNSLeak | null) {
-    const dnsLeakElement = document.getElementById(
-      "raw-dns-leak",
-    ) as JsonViewElement | null;
-
-    if (!dnsLeakElement) return;
-
-    dnsLeakElement.data = leak;
   }
 </script>
 
@@ -902,6 +898,7 @@ import InfoLine from "../components/InfoLine.astro";
 
   #metadata {
     gap: 1ch;
+    text-wrap: balance;
   }
 
   .footer {
