@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import logging
 import os
 from dataclasses import dataclass
@@ -232,4 +233,59 @@ def get_resolver_mmdb(ip: str, asn_reader: geoip2.database.Reader) -> dict:
             res["cidr"] = str(asn.network)
     except AddressNotFoundError:
         pass
+    return res
+
+
+def get_ecs_mmdb(
+    ecs_cidr: str,
+    asn_reader: geoip2.database.Reader,
+    city_reader: geoip2.database.Reader,
+) -> dict:
+    """
+    Función dedicada a devolver datos de filtración ECS.
+    Devuelve solo si la network_address es valida.
+    """
+    res = {
+        "ecs_cidr": ecs_cidr,
+        "asn": None,
+        "asn_org": None,
+        "cidr": None,
+        "geolocation": {
+            "country": {"name": None, "iso_code": None},
+            "region": None,
+            "city": None,
+            "continent_code": None,
+            "zip_code": None,
+        },
+    }
+
+    ecs_net = ipaddress.ip_network(ecs_cidr, strict=False)
+    ecs_addr = ecs_net.network_address
+    if not is_valid_ip(ecs_addr):
+        return res
+
+    try:
+        asn = asn_reader.asn(ecs_addr)
+        log.debug(f"Consulta asn para ECS: {asn}")
+        res["asn"] = asn.autonomous_system_number
+        res["asn_org"] = asn.autonomous_system_organization
+        if asn.network is not None:
+            res["cidr"] = str(asn.network)
+    except AddressNotFoundError:
+        pass
+
+    try:
+        city = city_reader.city(ecs_addr)
+        log.debug(f"Consulta city ECS: {city}")
+        geo = res["geolocation"]
+        geo["country"]["name"] = city.country.name
+        geo["country"]["iso_code"] = city.country.iso_code
+        geo["region"] = city.subdivisions.most_specific.name
+        geo["city"] = city.city.name
+        geo["continent_code"] = city.continent.code
+        geo["zip_code"] = city.postal.code
+
+    except AddressNotFoundError:
+        pass
+
     return res
