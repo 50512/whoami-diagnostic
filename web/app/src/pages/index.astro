@@ -72,7 +72,7 @@ import InfoLine from "../components/InfoLine.astro";
     </div>
   </div>
 
-  <div class="raw-view hidden" id="raw-tab">
+  <div class="raw-view" id="raw-tab">
     <RawCard title="/ip/detail" id="raw-ip-detail" collapse_depth={3} />
     <RawCard
       title="/client/headers"
@@ -93,26 +93,27 @@ import InfoLine from "../components/InfoLine.astro";
 <!-- SWITCH VIEWS -->
 <script>
   document.addEventListener("astro:page-load", () => {
-    const mainTab = document.getElementById("main-tab");
-    const rawTab = document.getElementById("raw-tab");
     const switchTab = document.getElementById(
       "view-switch",
     ) as HTMLInputElement;
-    if (!mainTab || !rawTab || !switchTab) return;
+    if (!switchTab) return;
 
-    const updateView = () => {
-      if (switchTab.checked) {
-        mainTab.classList.add("hidden");
-        rawTab.classList.remove("hidden");
-      } else {
-        mainTab.classList.remove("hidden");
-        rawTab.classList.add("hidden");
-      }
+    const updateHash = () => {
+      const hash = window.location.hash.substring(1).toLowerCase();
+      const cleanUrl = window.location.pathname + window.location.search;
+
+      if (hash === "raw") history.replaceState(null, "", cleanUrl);
+      else history.replaceState(null, "", "#raw");
     };
 
-    updateView();
+    const readHash = () => {
+      const hash = window.location.hash.substring(1).toLowerCase();
+      switchTab.checked = hash === "raw";
+    };
+
+    readHash();
     switchTab.addEventListener("input", () => {
-      updateView();
+      updateHash();
     });
   });
 </script>
@@ -854,6 +855,16 @@ import InfoLine from "../components/InfoLine.astro";
     }
   }
 
+  .title:has(#view-switch:checked) {
+    & ~ div#main-tab {
+      display: none;
+    }
+
+    & ~ div#raw-tab {
+      display: flex;
+    }
+  }
+
   .header {
     border-bottom: var(--border-dashed);
     display: flex;
@@ -883,7 +894,7 @@ import InfoLine from "../components/InfoLine.astro";
   }
 
   .raw-view {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: var(--space-4);
   }
