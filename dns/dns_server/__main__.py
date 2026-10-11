@@ -4,6 +4,8 @@ import logging
 import os
 import re
 
+import dns.edns
+import dns.exception
 import dns.message
 import dns.name
 import dns.rcode
@@ -58,6 +60,7 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
             query = dns.message.from_wire(payload)
             log.debug(f"query: {query}")
         except Exception:
+            log.exception("Error al transformar la query")
             return
 
         if not query.question:
@@ -70,9 +73,18 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         log.debug(f"question name: {q_name}")
         log.debug(f"question type: {q_type}")
 
-        response = self._build_response(query, q_name, q_type)
+        try:
+            response = self._build_response(query, q_name, q_type)
+        except dns.exception.FormError:
+            log.exception("query mal formada")
+            return
+
         log.debug(f"Destino: {addr};\nRespuesta: {response.to_text()}")
         self.transport.sendto(response.to_wire(), addr)
+        ecs = self._get_ecs(query)
+        ecs_cidr = None
+        if ecs:
+            ecs_cidr = ecs_to_cidr(ecs)
 
         token = self._extract_token(q_name)
         if token:
@@ -85,7 +97,22 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
                 return
 
             log.debug(f"real_ip: {real_ip}; addr[0]: {addr[0]}")
-            asyncio.create_task(self._record(token, resolver_ip, q_type))
+            asyncio.create_task(self._record(token, resolver_ip, q_type, ecs_cidr))
+
+    def _get_ecs(self, query: dns.message.Message) -> dns.edns.ECSOption | None:
+        """
+        Extrae ECS de existir, caso contrario, devuelve None
+        """
+        if query.edns < 0:
+            log.debug("ECS: None-1")
+            return None
+        for opt in query.options:
+            log.debug(f"OPT: {opt}")
+            if opt.otype == dns.edns.OptionType.ECS:
+                log.debug(f"OPT ECS: {opt}")
+                return opt
+        log.debug("ECS: None-2")
+        return None
 
     def _extract_token(self, q_name: dns.name.Name) -> str | None:
         """
@@ -112,6 +139,15 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         válida si el subdominio pertenece a la zona.
         """
         response = dns.message.make_response(query)
+        ecs = self._get_ecs(query)
+
+        if ecs is not None:
+            response.use_edns(
+                0,
+                payload=1232,
+                options=[dns.edns.ECSOption(ecs.address, ecs.srclen, 0)],
+            )
+
         if not q_name.is_subdomain(ZONE):
             response.set_rcode(dns.rcode.REFUSED)
             log.debug(f"Respuesta nula para {q_name}({dns.rdatatype.to_text(q_type)})")
@@ -127,7 +163,11 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         return response
 
     async def _record(
-        self, token: str, resolver_ip: str, q_type: dns.rdatatype.RdataType
+        self,
+        token: str,
+        resolver_ip: str,
+        q_type: dns.rdatatype.RdataType,
+        ecs_cidr: str | None,
     ) -> None:
         """
         Registra el token como clave en redis por TTL segundos. Se guarda la IP
@@ -138,7 +178,12 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         log.info(f"{token} - {resolver_ip} ({dns.rdatatype.to_text(q_type)})")
         try:
             async with self.redis.pipeline(transaction=True) as pipe:
-                await pipe.sadd(key, resolver_ip).expire(key, LEAK_KEY_TTL).execute()
+                pipe.sadd(key, resolver_ip).expire(key, LEAK_KEY_TTL)
+                if ecs_cidr:
+                    pipe.sadd(f"{key}:ecs", f"{resolver_ip}|{ecs_cidr}").expire(
+                        f"{key}:ecs", LEAK_KEY_TTL
+                    )
+                await pipe.execute()
         except Exception:
             log.exception("dns: Error al guardar el leak")
 
@@ -211,6 +256,19 @@ def is_valid_ip(ip: str) -> bool:
         return False
 
     return True
+
+
+def ecs_to_cidr(opt: dns.edns.ECSOption) -> str | None:
+    """
+    De ser valido, transforma ECS en una network.
+    """
+    if opt.srclen == 0:
+        return None
+    try:
+        net = ipaddress.ip_network(f"{opt.address}/{opt.srclen}", strict=False)
+    except ValueError:
+        return None
+    return str(net) if is_valid_ip(str(net.network_address)) else None
 
 
 async def main():
