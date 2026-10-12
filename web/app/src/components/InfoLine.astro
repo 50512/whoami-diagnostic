@@ -18,7 +18,7 @@ const { name, id, class: className } = Astro.props;
     <span class="code ipv6 hidden">
       IPv6: <span class="block-content">...</span>
     </span>
-    <span class="code client hidden">...</span>
+    <span class="code empty-line hidden">...</span>
   </div>
 </div>
 <style>
@@ -38,8 +38,15 @@ const { name, id, class: className } = Astro.props;
     }
   }
 
-  .info-line:has(.client-info-block) {
-    height: var(--space-7);
+  .info-line:has(.multi-line) {
+    min-height: var(--space-7);
+    max-height: var(--space-8);
+    height: unset;
+  }
+
+  .multi-line .empty-line:not(.hidden) {
+    display: flex;
+    flex-direction: column;
   }
 
   .info-block {
@@ -50,10 +57,9 @@ const { name, id, class: className } = Astro.props;
     flex: 1;
 
     min-width: 0;
-    overflow-x: auto;
+    overflow: auto;
 
-    /* scrollbar-width: thin; */
-    /* scrollbar-color: var(--surface-2) var(--surface-1); */
+    padding-right: var(--space-1);
 
     span {
       min-width: 100%;
