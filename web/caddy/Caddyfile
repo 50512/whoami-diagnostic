@@ -1,4 +1,13 @@
 {
+	log default {
+		output stderr
+		format filter {
+			request>uri regexp ^/dns-leak/[^/?]+ /dns-leak/REDACTED
+			request>headers delete
+			wrap json
+		}
+	}
+
 	servers {
 		# Necesario para evitar inyecciones de IP falsas y recibir la IP desde proxies inversos
 		trusted_proxies static 127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 {$TRUSTED_PROXIES:}
