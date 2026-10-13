@@ -20,6 +20,7 @@
 	header Access-Control-Allow-Origin "https://{env.MAIN_HOST}"
 	header Access-Control-Allow-Methods "GET, POST, OPTIONS"
 	header Access-Control-Allow-Headers "Content-Type"
+	header Access-Control-Allow-Credentials "true"
 	header Timing-Allow-Origin "https://{env.MAIN_HOST}"
 }
 
@@ -52,11 +53,19 @@
 }
 
 (to_api) {
-	@limit not path /ready /info
-	rate_limit @limit {
+	@limit_default not path /speed/start
+	rate_limit @limit_default {
 		zone by_ip {
 			key {client_ip}
 			events 60
+			window 1m
+		}
+	}
+	@limit_speed path /speed/start
+	rate_limit @limit_speed {
+		zone speed_start {
+			key {client_ip}
+			events 4
 			window 1m
 		}
 	}
@@ -81,7 +90,7 @@
 
 	# Rutas de API
 	@api_paths {
-		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /speed /speed/* /ready /info /all
+		path /ip /ip/* /dns-leak /dns-leak/* /client /client/* /speed /speed/* /ready /info /all /all.txt
 	}
 	handle @api_paths {
 		import to_api

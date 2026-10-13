@@ -34,6 +34,7 @@ import InfoLine from "../components/InfoLine.astro";
       <InfoLine name="CIDR" id="cidr-block" class="ip-info-block" />
       <InfoLine name="GEO" id="geo-block" class="ip-info-block" />
       <InfoLine name="LOCATION" id="loc-block" class="ip-info-block" />
+      <InfoLine name="TIMEZONE" id="tz-block" class="ip-info-block" />
       <InfoLine name="ZIP CODE" id="zip-block" class="ip-info-block" />
     </div>
 
@@ -606,6 +607,7 @@ import InfoLine from "../components/InfoLine.astro";
     "cidr-block": (data) => data.cidr ?? "-",
     "geo-block": (data) =>
       `${data.geolocation.country.name ?? "-"}/${data.geolocation.region ?? "-"}/${data.geolocation.city ?? "-"}`,
+    "tz-block": (data) => data.location.timezone ?? "-",
     "zip-block": (data) => data.geolocation.zip_code ?? "-",
   };
 
