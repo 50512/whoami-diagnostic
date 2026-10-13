@@ -77,6 +77,12 @@ import InfoLine from "../components/InfoLine.astro";
       <InfoLine name="ECS" id="ecs-block" class="multi-line dns-info-block" />
     </div>
 
+    <!-- METRICS -->
+    <div class="info-container client">
+      <h2 class="info-title">Metrics</h2>
+      <InfoLine name="RTT" id="rtt-block" class="rtt-info-block" />
+    </div>
+
     <!-- CARD FOOTER -->
     <div>
       <small class="footer micro" id="metadata"></small>
@@ -674,6 +680,8 @@ import InfoLine from "../components/InfoLine.astro";
       .querySelectorAll(".ip-info-block>.placeholder")
       .forEach((ele) => ele.classList.add("hidden"));
 
+    render_metrics(data);
+
     IP_VERSIONS.forEach((version) => {
       const currentDetail = data[version].data;
 
@@ -692,6 +700,30 @@ import InfoLine from "../components/InfoLine.astro";
       });
 
       render_location(currentDetail, version);
+    });
+  }
+
+  /**
+   * Escribe la información de las métricas
+   */
+  function render_metrics(data: Record<IPVersion, IPFetchResult>) {
+    document
+      .querySelectorAll(".rtt-info-block>.placeholder")
+      .forEach((ele) => ele.classList.add("hidden"));
+
+    IP_VERSIONS.forEach((version) => {
+      const currentRTT = data[version].rtt;
+
+      // Solo muestra la versión si esta disponible
+      if (!currentRTT) return;
+      document
+        .querySelectorAll(`.rtt-info-block>.${version}`)
+        .forEach((ele) => ele.classList.remove("hidden"));
+
+      const rttEle = document.querySelector(
+        `#rtt-block>.${version}>.block-content`,
+      );
+      if (rttEle) rttEle.textContent = `${currentRTT}ms`;
     });
   }
 
