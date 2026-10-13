@@ -71,18 +71,27 @@ const { name, id, class: className } = Astro.props;
     }
   }
 
-  .info-block::-webkit-scrollbar {
-    width: var(--space-1);
-    height: var(--space-1);
+  @media (hover: hover) and (pointer: fine) {
+    .info-block::-webkit-scrollbar {
+      width: var(--space-1);
+      height: var(--space-1);
+    }
+
+    .info-block::-webkit-scrollbar-track {
+      background: var(--surface-1);
+    }
+
+    /* Handle */
+    .info-block::-webkit-scrollbar-thumb {
+      background: var(--surface-2);
+    }
   }
 
-  .info-block::-webkit-scrollbar-track {
-    background: var(--surface-1);
-  }
-
-  /* Handle */
-  .info-block::-webkit-scrollbar-thumb {
-    background: var(--surface-2);
+  @media not ((hover: hover) and (pointer: fine)) {
+    .info-block {
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface-2) var(--surface-1);
+    }
   }
 
   @supports not selector(::-webkit-scrollbar) {
