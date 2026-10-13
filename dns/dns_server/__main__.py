@@ -3,6 +3,7 @@ import ipaddress
 import logging
 import os
 import re
+from logging.handlers import RotatingFileHandler
 
 import dns.edns
 import dns.exception
@@ -14,6 +15,7 @@ import dns.rrset
 import redis.asyncio as aioredis
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_FILE = os.environ.get("LOG_FILE")
 DNS_PORT = int(os.environ.get("DNS_PORT", "53"))
 DNS_ZONE = os.environ.get("DNS_ZONE", "dns-leak.host.com")
 ANSWER_IP = {"v4": "127.0.0.1", "v6": "::1"}
@@ -175,7 +177,8 @@ class LeakResolverProtocol(asyncio.DatagramProtocol):
         repetidos.
         """
         key = f"dnsleak:{token}"
-        log.info(f"{token} - {resolver_ip} ({dns.rdatatype.to_text(q_type)})")
+        log.debug(f"{token} - {resolver_ip} ({dns.rdatatype.to_text(q_type)})")
+        log.info(f"{resolver_ip} ({dns.rdatatype.to_text(q_type)})")
         try:
             async with self.redis.pipeline(transaction=True) as pipe:
                 pipe.sadd(key, resolver_ip).expire(key, LEAK_KEY_TTL)
@@ -272,9 +275,17 @@ def ecs_to_cidr(opt: dns.edns.ECSOption) -> str | None:
 
 
 async def main():
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if LOG_FILE:
+        handlers[0].setLevel(logging.WARNING)
+        handlers.append(
+            RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024**2, backupCount=3)
+        )
+
     logging.basicConfig(
         level=LOG_LEVEL,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
     )
     redis = aioredis.from_url(REDIS_URL, decode_responses=True)
     loop = asyncio.get_running_loop()

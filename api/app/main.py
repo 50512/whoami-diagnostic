@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import redis.asyncio as aioredis
@@ -21,15 +22,24 @@ ENABLE_DOCS = str(os.getenv("ENABLE_DOCS")).lower() in ("1", "on", "enable", "tr
 IP_HOSTS = [os.environ.get("IPV4_HOST"), os.environ.get("IPV6_HOST")]
 EXCLUDED_MIDDLEWARE_PATHS = ["/ready", "/info"]
 CLI_REGEX = re.compile(r"(?i)(curl|wget|python|httpie|aria2)")
+SENSITIVE_PATHS = re.compile(r"^/dns-leak/[^/]+")
 
 GEOIP_PATH = os.environ.get("GEOIP_PATH", "/var/opt/GeoIP")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_FILE = os.environ.get("LOG_FILE")
 log = logging.getLogger("fastapi.access")
+handlers: list[logging.Handler] = [logging.StreamHandler()]
+
+if LOG_FILE:
+    handlers[0].setLevel(logging.WARNING)
+    handlers.append(RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024**2, backupCount=3))
+
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=handlers,
 )
 
 
@@ -133,9 +143,19 @@ async def enforce_https(request: Request, call_next):
         '%s - "%s %s HTTP/%s" %s',
         client_ip if client_ip else request.client.host,
         request.method,
-        request.headers.get("host", "-") + request.url.path,
+        request.headers.get("host", "-") + loggable_path(request),
         request.scope.get("http_version", "-"),
         response.status_code,
     )
 
     return response
+
+
+def loggable_path(request: Request) -> str:
+    """
+    Remueve el token del `/dns-leak/{test_id}` de los logs para privacidad.
+    """
+    route = request.scope.get("route")
+    if route is not None:
+        return route.path
+    return SENSITIVE_PATHS.sub("/dns-leak/{test_id}", request.url.path)

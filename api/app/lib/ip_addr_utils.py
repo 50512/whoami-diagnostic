@@ -11,11 +11,11 @@ def is_valid_ip(ip: str | ipaddress.IPv4Address | ipaddress.IPv6Address | None) 
     if not ip:
         return False
     try:
-        if type(ip) == str:
+        if isinstance(ip, str):
             addr = ipaddress.ip_address(ip.strip())
         else:
             addr = ipaddress.ip_address(ip)
-            
+
         log.debug(f"Leyendo: {addr}")
     except ValueError:
         return False

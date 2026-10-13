@@ -30,6 +30,7 @@ services:
       - IPV6_HOST=${IPV6_HOST}
       - GEOIP_PATH=/var/opt/GeoIP
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/var/log/whoami/api.log
     healthcheck:
       test:
         [
@@ -41,6 +42,8 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    tmpfs:
+      - /var/log/whoami:size=32m,mode=0700
     depends_on:
       - redis
       - geoipupdate
@@ -55,6 +58,9 @@ services:
       - DNS_ZONE=${DNS_ZONE:-dns-leak.host.com}
       - DNS_PORT=53 # dentro del contenedor escucha en 53
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=/var/log/whoami/dns.log
+    tmpfs:
+      - /var/log/whoami:size=32m,mode=0700
     depends_on:
       - redis
 
@@ -75,15 +81,12 @@ services:
     image: redis:7-alpine
     container_name: whoami-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
 
 networks:
   admin_public_network:
     external: true
 
 volumes:
-  redis_data:
   geoip_data:
   whoami_data:
