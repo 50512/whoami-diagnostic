@@ -3,6 +3,7 @@ import MainLayout from "../layouts/MainLayout.astro";
 import { LabToggle } from "@50512/ui/inputs";
 import RawCard from "../components/RawCard.astro";
 import InfoLine from "../components/InfoLine.astro";
+import SpeedLine from "../components/SpeedLine.astro";
 ---
 
 <script src="/env.js" is:inline defer></script>
@@ -81,6 +82,7 @@ import InfoLine from "../components/InfoLine.astro";
     <div class="info-container client">
       <h2 class="info-title">Metrics</h2>
       <InfoLine name="RTT" id="rtt-block" class="rtt-info-block" />
+      <SpeedLine name="SPEED" id="speed-block" class="speed-info-block" />
     </div>
 
     <!-- CARD FOOTER -->
@@ -274,6 +276,13 @@ import InfoLine from "../components/InfoLine.astro";
     status: string;
     asn_last_update: string;
     city_last_update: string;
+  }
+
+  /** Interfaz del resultado de /speed/start */
+  interface SpeedStart {
+    conns: number;
+    ttl: number;
+    max_size: number;
   }
 
   // --------- DATA EXTRACTION --------
@@ -558,12 +567,39 @@ import InfoLine from "../components/InfoLine.astro";
     return results;
   }
 
-  document.addEventListener("astro:page-load", load_all);
+  /**
+   * Setea la cookie de speedtest y regresa los datos de la cookie
+   */
+  async function getSpeedToken(
+    version: IPVersion,
+    conns: number,
+  ): Promise<SpeedStart | null> {
+    let results: SpeedStart | null = null;
+
+    const FETCH_URLS = {
+      ipv4: `https://${window.__ENV__.IPV4_HOST}/speed/start?conns=${conns}`,
+      ipv6: `https://${window.__ENV__.IPV6_HOST}/speed/start?conns=${conns}`,
+    };
+
+    try {
+      const res = await fetch(FETCH_URLS[version], {
+        credentials: "include",
+        method: "POST",
+      });
+      results = (await res.json()) as SpeedStart;
+    } catch (err) {
+      console.error("Error al obtener el token del speedtest", err);
+    }
+
+    return results;
+  }
+
+  document.addEventListener("astro:page-load", loadAll);
 
   /**
    * Ejecuta toda la lógica de consulta y medición
    */
-  async function load_all() {
+  async function loadAll() {
     // Inicia en paralelo todas las peticiones
     const ipPromise = fetchIPDetails();
     const headersPromise = getClientHeaders();
@@ -572,8 +608,8 @@ import InfoLine from "../components/InfoLine.astro";
 
     const { ipv4, ipv6 } = await ipPromise;
 
-    render_ip_header({ ipv4, ipv6 });
-    render_ip_info({ ipv4, ipv6 });
+    renderIPHeader({ ipv4, ipv6 });
+    renderIPInfo({ ipv4, ipv6 });
 
     // Requiere resultado de IP, por lo que se inicializa después
     const rdapPromise = getRDAPinfo({
@@ -587,9 +623,9 @@ import InfoLine from "../components/InfoLine.astro";
       metadataPromise,
     ]);
 
-    if (metadata) render_metadata(metadata);
-    render_headers(headers);
-    render_rdap(rdapRaw);
+    if (metadata) renderMetadata(metadata);
+    renderHeaders(headers);
+    renderRDAP(rdapRaw);
 
     const leak = await leakPromise;
 
@@ -598,9 +634,10 @@ import InfoLine from "../components/InfoLine.astro";
       ipv6: ipv6.data,
       leak,
     });
-    if (attributions) render_attributions(attributions);
+    if (attributions) renderAttributions(attributions);
 
-    render_dns_leak(leak);
+    renderDNSLeak(leak);
+    renderSpeedtest({ ipv4, ipv6 });
   }
 
   // --------- RENDER ---------
@@ -650,7 +687,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe las IP a la cabecera de la vista principal
    */
-  function render_ip_header(data: Record<IPVersion, IPFetchResult>) {
+  function renderIPHeader(data: Record<IPVersion, IPFetchResult>) {
     const mainIP = document.getElementById("ip-h2");
     const secondIP = document.getElementById("ip-h3");
     const { ipv4, ipv6 } = data;
@@ -670,7 +707,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe toda la info de IP
    */
-  function render_ip_info(data: Record<IPVersion, IPFetchResult>) {
+  function renderIPInfo(data: Record<IPVersion, IPFetchResult>) {
     const rawElement = document.getElementById(
       "raw-ip-detail",
     ) as JsonViewElement | null;
@@ -752,9 +789,46 @@ import InfoLine from "../components/InfoLine.astro";
   }
 
   /**
+   * Activa el botón de speedtest y prepara los resultados
+   */
+  function renderSpeedtest(data: Record<IPVersion, IPFetchResult>) {
+    if (!data.ipv4.data && !data.ipv6.data) return;
+    document
+      .querySelectorAll(".speed-info-block>.placeholder")
+      .forEach((ele) => ele.classList.add("hidden"));
+
+    document
+      .querySelectorAll(".speed-info-block>.empty-line")
+      .forEach((ele) => ele.classList.remove("hidden"));
+
+    let speedTargetVersion: IPVersion | null = null;
+
+    // El target del test es el que tenga menor RTT de ser posible
+    if (data.ipv4.rtt && data.ipv6.rtt)
+      speedTargetVersion = data.ipv4.rtt < data.ipv6.rtt ? "ipv4" : "ipv6";
+    else if (data.ipv4.data || data.ipv6.data)
+      speedTargetVersion = data.ipv4.data != null ? "ipv4" : "ipv6";
+
+    if (!speedTargetVersion)
+      return document
+        .querySelector("#speed-block>.empty-line")
+        ?.replaceChildren("-");
+
+    const speedtestButton = document.querySelector(
+      "#speed-block>.empty-line>button",
+    ) as HTMLButtonElement | null;
+    if (!speedtestButton) return;
+
+    speedtestButton.addEventListener("click", async () => {
+      const data = await getSpeedToken(speedTargetVersion, 1);
+      console.log(data);
+    });
+  }
+
+  /**
    * Escribe la data de RDAP (bloque procesado e información cruda)
    */
-  function render_rdap(rdap: Record<IPVersion, RDAPFetchResults>) {
+  function renderRDAP(rdap: Record<IPVersion, RDAPFetchResults>) {
     const rawElement = document.getElementById(
       "raw-rdap",
     ) as JsonViewElement | null;
@@ -793,7 +867,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe las cabeceras
    */
-  function render_headers(headers: HeadersFetchResult) {
+  function renderHeaders(headers: HeadersFetchResult) {
     const clientHeaders = document.getElementById(
       "raw-client-headers",
     ) as JsonViewElement | null;
@@ -821,7 +895,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe las filtraciones DNS + ECS
    */
-  function render_dns_leak(leak: DNSLeak | null) {
+  function renderDNSLeak(leak: DNSLeak | null) {
     const dnsLeakElement = document.getElementById(
       "raw-dns-leak",
     ) as JsonViewElement | null;
@@ -882,7 +956,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe el small inferior de metadata
    */
-  function render_metadata(data: MetaAPI) {
+  function renderMetadata(data: MetaAPI) {
     const rawElement = document.getElementById(
       "raw-metadata",
     ) as JsonViewElement | null;
@@ -913,7 +987,7 @@ import InfoLine from "../components/InfoLine.astro";
   /**
    * Escribe el small inferior de atribuciones
    */
-  function render_attributions(attributions: Record<string, Attributions>) {
+  function renderAttributions(attributions: Record<string, Attributions>) {
     const attrEle = document.getElementById("attributions");
     if (!attrEle) return;
     const lines: Array<HTMLAnchorElement> = [];

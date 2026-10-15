@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import (APIRouter, Cookie, Depends, HTTPException, Query, Request,
                      Response, status)
 from fastapi.responses import JSONResponse, StreamingResponse
+from starlette.requests import ClientDisconnect
 from redis.asyncio import Redis
 
 log = logging.getLogger("fastapi.speed")
@@ -179,10 +180,14 @@ async def speed_upload(request: Request, conns: Annotated[int, require_slot("up"
         return Response(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
 
     received = 0
-    async for chunk in request.stream():
-        received += len(chunk)
-        if received > limit:
-            return Response(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
+    try:
+        async for chunk in request.stream():
+            received += len(chunk)
+            if received > limit:
+                return Response(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
+    except ClientDisconnect:
+        log.debug(f"Subida cortada por el cliente. Se recibió {received} bytes.")
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     log.debug(f"Tamaño recibido: {received}")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
