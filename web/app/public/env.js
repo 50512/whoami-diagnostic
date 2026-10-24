@@ -3,4 +3,5 @@ window.__ENV__ = {
   IPV4_HOST: '{{env "IPV4_HOST"}}',
   IPV6_HOST: '{{env "IPV6_HOST"}}',
   LEAK_ZONE: '{{env "LEAK_ZONE"}}',
+  REALTIME_URL: '{{env "REALTIME_URL"}}',
 };

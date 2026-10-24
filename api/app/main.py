@@ -15,7 +15,7 @@ from app.lib.bootstrap.known_resolvers import RESOLVER_SOURCES
 from app.lib.bootstrap.rdap import IANA_SOURCES
 from app.lib.geoip_utils import GeoIPManager
 from app.lib.ip_addr_utils import is_valid_ip
-from app.routers import client, dns_leak, ip, meta, speed
+from app.routers import client, dns_leak, ip, meta
 
 ENABLE_DOCS = str(os.getenv("ENABLE_DOCS")).lower() in ("1", "on", "enable", "true")
 
@@ -96,7 +96,6 @@ app.include_router(ip.router)
 app.include_router(client.router)
 app.include_router(dns_leak.router)
 app.include_router(meta.router)
-app.include_router(speed.router)
 
 
 @app.middleware("http")

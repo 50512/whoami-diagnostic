@@ -3,7 +3,6 @@ import MainLayout from "../layouts/MainLayout.astro";
 import { LabToggle } from "@50512/ui/inputs";
 import RawCard from "../components/RawCard.astro";
 import InfoLine from "../components/InfoLine.astro";
-import SpeedLine from "../components/SpeedLine.astro";
 ---
 
 <script src="/env.js" is:inline defer></script>
@@ -82,7 +81,6 @@ import SpeedLine from "../components/SpeedLine.astro";
     <div class="info-container client">
       <h2 class="info-title">Metrics</h2>
       <InfoLine name="RTT" id="rtt-block" class="rtt-info-block" />
-      <SpeedLine name="SPEED" id="speed-block" class="speed-info-block" />
     </div>
 
     <!-- CARD FOOTER -->
@@ -144,8 +142,7 @@ import SpeedLine from "../components/SpeedLine.astro";
   import { loadClientHeaders } from "../scripts/client";
   import { loadMetadata, loadAttributions } from "../scripts/meta";
   import { loadRDAPInfo } from "../scripts/rdap";
-  import { initSpeedtest } from "../scripts/speed";
-  import { renderMetrics } from "../scripts/metrics";
+  import { measureRealtimeEndpoint, renderMetrics } from "../scripts/metrics";
 
   document.addEventListener("astro:page-load", loadAll);
 
@@ -158,6 +155,7 @@ import SpeedLine from "../components/SpeedLine.astro";
     const ipPromise = loadIPInfo();
     const leakPromise = loadDNSLeak();
     const headersPromise = loadClientHeaders();
+    const realtimePromise = measureRealtimeEndpoint();
 
     const { ipv4, ipv6 } = await ipPromise;
 
@@ -168,10 +166,12 @@ import SpeedLine from "../components/SpeedLine.astro";
     });
 
     const headers = await headersPromise;
+    const realtimeRTT = await realtimePromise;
 
     renderMetrics({
       ipv4: ipv4.rtt,
       ipv6: ipv6.rtt,
+      realtime: realtimeRTT,
       host: headers.rtt,
     });
     const leak = await leakPromise;
@@ -181,8 +181,6 @@ import SpeedLine from "../components/SpeedLine.astro";
       ipv6: ipv6.data,
       leak,
     });
-
-    initSpeedtest({ ipv4, ipv6 });
   }
 </script>
 
