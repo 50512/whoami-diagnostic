@@ -150,20 +150,30 @@ import InfoLine from "../components/InfoLine.astro";
    * Ejecuta toda la lógica de consulta y medición
    */
   async function loadAll() {
+    if (!document.getElementById("main-tab")) return;
+
+    const ctrl = new AbortController();
+    // Aborta en navegación
+    document.addEventListener("astro:before-swap", () => ctrl.abort(), {
+      once: true,
+    });
     // Inicia en paralelo todas las peticiones
-    loadMetadata();
-    const ipPromise = loadIPInfo();
-    const leakPromise = loadDNSLeak();
-    const headersPromise = loadClientHeaders();
-    const realtimePromise = measureRealtimeEndpoint();
+    loadMetadata(ctrl.signal);
+    const ipPromise = loadIPInfo(ctrl.signal);
+    const leakPromise = loadDNSLeak(ctrl.signal);
+    const headersPromise = loadClientHeaders(ctrl.signal);
+    const realtimePromise = measureRealtimeEndpoint(ctrl.signal);
 
     const { ipv4, ipv6 } = await ipPromise;
 
     // Requiere resultado de IP, por lo que se inicializa después
-    loadRDAPInfo({
-      ipv4: ipv4.data,
-      ipv6: ipv6.data,
-    });
+    loadRDAPInfo(
+      {
+        ipv4: ipv4.data,
+        ipv6: ipv6.data,
+      },
+      ctrl.signal,
+    );
 
     const headers = await headersPromise;
     const realtimeRTT = await realtimePromise;

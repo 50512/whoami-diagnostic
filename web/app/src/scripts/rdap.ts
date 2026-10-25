@@ -1,6 +1,7 @@
 import { type IPVersion, IP_VERSIONS, type IPDetail } from "./ip";
 import type { JsonViewElement } from "@50512/ui/json";
 import { hidePlaceholders, unhideAll } from "./lib/dom";
+import { fetchJSON } from "./lib/net";
 
 /** Estructura de información de RDAP (solo datos utilizados en el script) */
 interface RDAPInfo {
@@ -54,8 +55,9 @@ const propertyTemplatesRDAP: Record<string, (data: RDAPInfo) => string> = {
  */
 export async function loadRDAPInfo(
   data: Record<IPVersion, IPDetail | null>,
+  signal: AbortSignal | null = null,
 ): Promise<Record<IPVersion, RDAPFetchResults>> {
-  const RDAPData = await getRDAPInfo(data);
+  const RDAPData = await getRDAPInfo(data, signal);
   renderRDAP(RDAPData);
   return RDAPData;
 }
@@ -65,6 +67,7 @@ export async function loadRDAPInfo(
  */
 export async function getRDAPInfo(
   data: Record<IPVersion, IPDetail | null>,
+  signal: AbortSignal | null = null,
 ): Promise<Record<IPVersion, RDAPFetchResults>> {
   const results: Record<IPVersion, RDAPFetchResults> = {
     ipv4: { data: null, url: null },
@@ -75,16 +78,8 @@ export async function getRDAPInfo(
       const currentVersion = data[version];
       if (!currentVersion || !currentVersion.rdap_url) return;
       const url = currentVersion.rdap_url;
-
-      try {
-        const res = await fetch(url);
-        results[version].url = url;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        results[version].data = (await res.json()) as RDAPResponse;
-      } catch (err) {
-        console.error(`No se pudo obtener RDAP de ${version}: ${err}`);
-      }
+      results[version].url = url;
+      results[version].data = await fetchJSON<RDAPResponse>(url, { signal });
     }),
   );
   return results;

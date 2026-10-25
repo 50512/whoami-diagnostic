@@ -21,8 +21,10 @@ interface MetaAPI {
 /**
  * Obtiene los metadatos de la API y los dibuja en pantalla
  */
-export async function loadMetadata(): Promise<MetaAPI | null> {
-  const data = await getMetaAPI();
+export async function loadMetadata(
+  signal: AbortSignal | null = null,
+): Promise<MetaAPI | null> {
+  const data = await getMetaAPI(signal);
   if (data) renderMetadata(data);
   return data;
 }
@@ -30,8 +32,10 @@ export async function loadMetadata(): Promise<MetaAPI | null> {
 /**
  * Obtiene la metadata de la API (estado y última actualización)
  */
-export async function getMetaAPI(): Promise<MetaAPI | null> {
-  return await fetchJSON<MetaAPI>("/info");
+export async function getMetaAPI(
+  signal: AbortSignal | null = null,
+): Promise<MetaAPI | null> {
+  return await fetchJSON<MetaAPI>("/info", { signal });
 }
 
 /**

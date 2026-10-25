@@ -59,8 +59,10 @@ const propertyTemplatesIP: Record<string, (data: IPDetail) => string> = {
 /**
  * Obtiene los datos de IP de la API y los dibuja en pantalla
  */
-export async function loadIPInfo(): Promise<Record<IPVersion, IPFetchResult>> {
-  const data = await getIPInfo();
+export async function loadIPInfo(
+  signal: AbortSignal | null = null,
+): Promise<Record<IPVersion, IPFetchResult>> {
+  const data = await getIPInfo(signal);
   renderIPHeader(data);
   renderIPInfo(data);
   return data;
@@ -69,7 +71,9 @@ export async function loadIPInfo(): Promise<Record<IPVersion, IPFetchResult>> {
 /**
  * Regresa el objeto de resultados para las peticiones detalladas de IPv4 e IPv6 con la medida RTT
  */
-export async function getIPInfo(): Promise<Record<IPVersion, IPFetchResult>> {
+export async function getIPInfo(
+  ctrlSignal: AbortSignal | null = null,
+): Promise<Record<IPVersion, IPFetchResult>> {
   const results: Record<IPVersion, IPFetchResult> = {
     ipv4: {
       data: null,
@@ -95,10 +99,9 @@ export async function getIPInfo(): Promise<Record<IPVersion, IPFetchResult>> {
   await Promise.all(
     IP_VERSIONS.map(async (version) => {
       const url = FETCH_URLS[version];
-      const signal = AbortSignal.any([
-        grace.signal,
-        AbortSignal.timeout(HARD_TIMEOUT_MS),
-      ]);
+      const signals = [grace.signal, AbortSignal.timeout(HARD_TIMEOUT_MS)];
+      if (ctrlSignal) signals.push(ctrlSignal);
+      const signal = AbortSignal.any(signals);
 
       const data = await fetchJSON<IPDetail>(url, { signal });
       const rtt = measureRTT(url);

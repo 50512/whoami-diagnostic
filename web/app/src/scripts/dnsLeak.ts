@@ -33,8 +33,10 @@ export interface DNSLeak {
 /**
  * Obtiene los datos de DNS Leak y los dibuja en pantalla
  */
-export async function loadDNSLeak(): Promise<DNSLeak | null> {
-  const data = await getDNSLeak();
+export async function loadDNSLeak(
+  signal: AbortSignal | null = null,
+): Promise<DNSLeak | null> {
+  const data = await getDNSLeak(signal);
   renderDNSLeak(data);
   return data;
 }
@@ -44,12 +46,16 @@ export async function loadDNSLeak(): Promise<DNSLeak | null> {
  * al endpoint del leak la información de los resolvers que consultaron el
  * UUID
  */
-export async function getDNSLeak(): Promise<DNSLeak | null> {
+export async function getDNSLeak(
+  ctrlSignal: AbortSignal | null = null,
+): Promise<DNSLeak | null> {
   const test_id = crypto.randomUUID().replaceAll("-", "");
   let results: DNSLeak | null = null;
 
   for (let j = 0; j < 4; j++) {
-    const signal = AbortSignal.timeout(2500);
+    const signals = [AbortSignal.timeout(2500)];
+    if (ctrlSignal) signals.push(ctrlSignal);
+    const signal = AbortSignal.any(signals);
     const requests = [];
 
     for (let i = 0; i < 10; i++) {
@@ -63,9 +69,12 @@ export async function getDNSLeak(): Promise<DNSLeak | null> {
     }
 
     await Promise.allSettled(requests);
+    if (ctrlSignal?.aborted) return null;
   }
 
-  results = await fetchJSON<DNSLeak>(`/dns-leak/${test_id}`);
+  results = await fetchJSON<DNSLeak>(`/dns-leak/${test_id}`, {
+    signal: ctrlSignal,
+  });
 
   return results;
 }

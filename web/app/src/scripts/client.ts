@@ -47,8 +47,10 @@ const headersTemplates: Record<string, (data: HeadersInfo) => string> = {
 /**
  * Obtiene los datos de las cabeceras de los clientes y los escribe en pantalla
  */
-export async function loadClientHeaders(): Promise<HeadersFetchResult> {
-  const data = await getClientHeaders();
+export async function loadClientHeaders(
+  signal: AbortSignal | null = null,
+): Promise<HeadersFetchResult> {
+  const data = await getClientHeaders(signal);
   renderHeaders(data);
   return data;
 }
@@ -57,14 +59,16 @@ export async function loadClientHeaders(): Promise<HeadersFetchResult> {
  * Devuelve las cabeceras recibidas por el servidor con la medida RTT
  * por el host actual/principal
  */
-export async function getClientHeaders(): Promise<HeadersFetchResult> {
+export async function getClientHeaders(
+  signal: AbortSignal | null = null,
+): Promise<HeadersFetchResult> {
   const results: HeadersFetchResult = {
     headers: null,
     rtt: null,
   };
 
   const url = "/client/headers";
-  const headers = await fetchJSON<HeadersAPIResult | null>(url);
+  const headers = await fetchJSON<HeadersAPIResult>(url, { signal });
 
   if (headers) results.headers = headers.headers;
   results.rtt = measureRTT(url);

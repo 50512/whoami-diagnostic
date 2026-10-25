@@ -23,9 +23,13 @@ const MAX_TIMEOUT = 8000;
 /**
  * Realiza una petición al endpoint `realtime` y devuelve la medida RTT
  */
-export async function measureRealtimeEndpoint(): Promise<number | null> {
+export async function measureRealtimeEndpoint(
+  ctrlSignal: AbortSignal | null = null,
+): Promise<number | null> {
   if (!window.__ENV__.REALTIME_URL) return null;
-  const signal = AbortSignal.timeout(MAX_TIMEOUT);
+  const signals = [AbortSignal.timeout(MAX_TIMEOUT)];
+  if (ctrlSignal) signals.push(ctrlSignal);
+  const signal = AbortSignal.any(signals);
   try {
     const res = await fetch(window.__ENV__.REALTIME_URL, {
       cache: "no-store",
