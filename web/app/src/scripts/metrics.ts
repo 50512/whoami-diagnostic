@@ -17,10 +17,20 @@ const rttKeyString = {
   realtime: "EDGE-RT",
 } as const;
 
+/** Máximo de 8s para medida externa */
+const MAX_TIMEOUT = 8000;
+
+/**
+ * Realiza una petición al endpoint `realtime` y devuelve la medida RTT
+ */
 export async function measureRealtimeEndpoint(): Promise<number | null> {
   if (!window.__ENV__.REALTIME_URL) return null;
+  const signal = AbortSignal.timeout(MAX_TIMEOUT);
   try {
-    const res = await fetch(window.__ENV__.REALTIME_URL, { cache: "no-store" });
+    const res = await fetch(window.__ENV__.REALTIME_URL, {
+      cache: "no-store",
+      signal,
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await res.text();
   } catch (err) {
