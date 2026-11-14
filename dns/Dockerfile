@@ -1,5 +1,7 @@
 FROM python:3.14-slim
-LABEL org.opencontainers.image.source="https://github.com/50512/whoami-diagnostic"
+LABEL org.opencontainers.image.source="https://github.com/50512/whoami-diagnostic" \
+      org.opencontainers.image.licenses="MIT"
+COPY --from=repo LICENSE /licenses/LICENSE
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
