@@ -10,6 +10,11 @@ Registro de los cambios efectuados y los cambios pendientes.
 
 ## Versiones
 
+### v0.23.0
+
+- Cambios menores para accesibilidad en la web principal.
+- Cambiado el título de `/dns-leak/{token}` -> `/dns-leak/{test_id}` en vista _RAW_ para consistencia con la API.
+
 ### v0.22.0
 
 - Añadida `AbortSignal` para la medida `RTT` del _endpoint_ opcional.
