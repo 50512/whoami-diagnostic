@@ -28,6 +28,10 @@ async def all_data(request: Request):
 
 @router.get("/all.txt")
 async def text_plain_data(request: Request):
+    """
+    Regresa en texto plano formateado los datos de detalles de la IP
+    y las cabeceras del cliente.
+    """
     data = get_ip_detail(request, request.app.state.rdap_store)
     data["headers"] = get_headers(request)
 

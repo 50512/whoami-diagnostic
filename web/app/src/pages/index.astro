@@ -30,23 +30,27 @@ import InfoLine from "../components/InfoLine.astro";
     <!-- IP INFO -->
     <div class="info-container">
       <h2 class="info-title">IP info</h2>
-      <InfoLine name="ASN" id="asn-block" class="ip-info-block" />
-      <InfoLine name="CIDR" id="cidr-block" class="ip-info-block" />
-      <InfoLine name="GEO" id="geo-block" class="ip-info-block" />
-      <InfoLine name="LOCATION" id="loc-block" class="ip-info-block" />
-      <InfoLine name="TIMEZONE" id="tz-block" class="ip-info-block" />
-      <InfoLine name="ZIP CODE" id="zip-block" class="ip-info-block" />
+      <dl>
+        <InfoLine name="ASN" id="asn-block" class="ip-info-block" />
+        <InfoLine name="CIDR" id="cidr-block" class="ip-info-block" />
+        <InfoLine name="GEO" id="geo-block" class="ip-info-block" />
+        <InfoLine name="LOCATION" id="loc-block" class="ip-info-block" />
+        <InfoLine name="TIMEZONE" id="tz-block" class="ip-info-block" />
+        <InfoLine name="ZIP CODE" id="zip-block" class="ip-info-block" />
+      </dl>
     </div>
 
     <!-- RDAP INFO -->
     <div class="info-container">
       <h2 class="info-title">RDAP info</h2>
-      <InfoLine
-        name="REGISTRANT"
-        id="registrant-block"
-        class="rdap-info-block"
-      />
-      <InfoLine name="RDAP NET" id="rdap-net-block" class="rdap-info-block" />
+      <dl>
+        <InfoLine
+          name="REGISTRANT"
+          id="registrant-block"
+          class="rdap-info-block"
+        />
+        <InfoLine name="RDAP NET" id="rdap-net-block" class="rdap-info-block" />
+      </dl>
     </div>
 
     <!-- CLIENT INFO -->
@@ -69,18 +73,23 @@ import InfoLine from "../components/InfoLine.astro";
     <!-- DNS LEAK -->
     <div class="info-container client">
       <h2 class="info-title">DNS</h2>
-      <InfoLine
-        name="RESOLVERS"
-        id="resolvers-block"
-        class="multi-line dns-info-block"
-      />
-      <InfoLine name="ECS" id="ecs-block" class="multi-line dns-info-block" />
+      <dl>
+        <InfoLine
+          name="RESOLVERS"
+          id="resolvers-block"
+          class="multi-line dns-info-block"
+        />
+        <InfoLine name="ECS" id="ecs-block" class="multi-line dns-info-block" />
+      </dl>
     </div>
 
     <!-- METRICS -->
     <div class="info-container client">
       <h2 class="info-title">Metrics</h2>
-      <InfoLine name="RTT" id="rtt-block" class="rtt-info-block" />
+
+      <dl>
+        <InfoLine name="RTT" id="rtt-block" class="rtt-info-block" />
+      </dl>
     </div>
 
     <!-- CARD FOOTER -->
@@ -97,7 +106,7 @@ import InfoLine from "../components/InfoLine.astro";
       id="raw-client-headers"
       collapse_depth={3}
     />
-    <RawCard title="/dns-leak/{token}" id="raw-dns-leak" collapse_depth={2} />
+    <RawCard title="/dns-leak/{test_id}" id="raw-dns-leak" collapse_depth={2} />
     <RawCard title="/info" id="raw-metadata" />
     <RawCard
       title="RDAP-Registrant"
@@ -262,6 +271,10 @@ import InfoLine from "../components/InfoLine.astro";
 
   .info-container.client {
     margin: var(--space-1) 0;
+  }
+
+  dl {
+    margin: 0;
   }
 
   #attributions {
