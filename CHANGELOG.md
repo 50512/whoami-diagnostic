@@ -10,6 +10,10 @@ Registro de los cambios efectuados y los cambios pendientes.
 
 ## Versiones
 
+### v0.23.1
+
+- Arreglo de accesibilidad por los cambios anteriores.
+
 ### v0.23.0
 
 - Cambios menores para accesibilidad en la web principal.

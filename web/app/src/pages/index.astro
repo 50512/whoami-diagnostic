@@ -56,18 +56,24 @@ import InfoLine from "../components/InfoLine.astro";
     <!-- CLIENT INFO -->
     <div class="info-container client">
       <h2 class="info-title">Client headers</h2>
-      <InfoLine name="USER-AGENT" id="ua-block" class="client-info-block" />
-      <InfoLine name="LANGUAGE" id="language-block" class="client-info-block" />
-      <InfoLine
-        name="CLIENT-HINT UA"
-        id="sec-ch-ua-block"
-        class="client-info-block"
-      />
-      <InfoLine
-        name="PLATFORM"
-        id="sec-ch-ua-platform-block"
-        class="client-info-block"
-      />
+      <dl>
+        <InfoLine name="USER-AGENT" id="ua-block" class="client-info-block" />
+        <InfoLine
+          name="LANGUAGE"
+          id="language-block"
+          class="client-info-block"
+        />
+        <InfoLine
+          name="CLIENT-HINT UA"
+          id="sec-ch-ua-block"
+          class="client-info-block"
+        />
+        <InfoLine
+          name="PLATFORM"
+          id="sec-ch-ua-platform-block"
+          class="client-info-block"
+        />
+      </dl>
     </div>
 
     <!-- DNS LEAK -->
