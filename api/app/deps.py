@@ -17,6 +17,8 @@ ALLOWED_HEADERS = {
     "forwarded",
 }
 
+ALLOWED_PREFIXES = ("sec-ch-ua",)
+
 
 def get_plain_ip(request: Request) -> str | None:
     """
@@ -33,7 +35,9 @@ def get_headers(request: Request) -> dict[str, str]:
     Devuelve las cabeceras del cliente en la lista de cabeceras permitidas.
     """
     clean_headers = {
-        key: value for key, value in request.headers.items() if key in ALLOWED_HEADERS
+        key: value
+        for key, value in request.headers.items()
+        if key in ALLOWED_HEADERS or key.startswith(ALLOWED_PREFIXES)
     }
     return clean_headers
 
