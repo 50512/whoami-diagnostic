@@ -6,9 +6,6 @@ from app.lib.geoip_utils import get_json_mmdb
 
 ALLOWED_HEADERS = {
     "user-agent",
-    "sec-ch-ua",
-    "sec-ch-ua-mobile",
-    "sec-ch-ua-platform",
     "accept-language",
     "accept",
     "accept-encoding",
