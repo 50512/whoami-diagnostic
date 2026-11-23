@@ -2,16 +2,23 @@
 import { AppShell } from "@50512/ui/layout";
 import { NavBar, NavLink } from "@50512/ui/nav";
 import MainCard from "./MainCard.astro";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "whoami diagnostic" } = Astro.props;
 ---
 
 <AppShell
-  title="IP Diagnostic"
+  {title}
   status="trial"
   barLabel="en construcción"
   footerMarginAuto={false}
 >
   <NavBar slot="navbar" baseURL="https://50512.dev/">
     <NavLink href="/">Inicio</NavLink>
+    <NavLink href="/about">Acerca de</NavLink>
   </NavBar>
   <div class="wrap">
     <MainCard>

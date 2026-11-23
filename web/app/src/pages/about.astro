@@ -1,0 +1,249 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import LabDetails from "@50512/ui/details";
+---
+
+<MainLayout title="whoami diagnostic --about">
+  <div class="title">
+    <h1>Acerca de</h1>
+  </div>
+
+  <p>
+    <code>whoami diagnostic</code> es una herramienta web que usa los datos de
+    tu conexión y tu navegador para entregar un <em>diagnóstico</em> de tu red.
+  </p>
+
+  <LabDetails title="Cómo funciona">
+    <p>
+      El servidor recibe los datos proporcionados por tu conexión y tu
+      navegador, los enriquece y los devuelve en formato <code>JSON</code>. La
+      web los muestra en la vista principal, y la vista <code>RAW</code> carga
+      los <code>JSON</code> tal cual llegan. Las consultas RDAP y las métricas
+      RTT se ejecutan solo en el navegador.
+    </p>
+  </LabDetails>
+
+  <LabDetails title="De dónde se obtienen los datos">
+    <p>
+      Los datos de origen los brindan tu conexión, tu navegador y tu resolver
+      DNS. La información adicional se obtiene de la base de datos{" "}
+      <a
+        href="https://www.maxmind.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        GeoLite2 de MaxMind
+      </a>
+      , procesada en nuestro servidor, y de los{" "}
+      <em>Registros Regionales de Internet (RIR)</em> correspondientes.
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Qué cabeceras se muestran">
+    <p>El servidor solo refleja las siguientes cabeceras:</p>
+    <ul>
+      <li>
+        <code>user-agent</code>: Cabecera para identificación del
+        dispositivo/navegador del usuario.
+      </li>
+
+      <li>
+        <code>accept</code>: Indica qué formatos puede procesar el cliente.
+      </li>
+
+      <li>
+        <code>accept-encoding</code>: Indica qué métodos de compresión soporta
+        el cliente. <strong>No es reflejo exacto siempre</strong>. Cloudflare
+        CDN lo fija en <code>gzip, br</code> y el proxy de este proyecto pone{" "}
+        <code>gzip</code> si la cabecera viene vacía o no existe.
+      </li>
+
+      <li>
+        <code>accept-language</code>: Idioma aceptado por el navegador.
+      </li>
+
+      <li>
+        <code>dnt</code>: Obsoleta. Solicitaba al servidor no rastrear al
+        cliente. <strong>No tenía obligación ni respaldo legal</strong>.
+      </li>
+
+      <li>
+        <code>sec-gpc</code>: Rechaza la venta e intercambio de los datos del
+        cliente.{" "}
+        <strong>
+          No es un estándar aún, pero ya está respaldado por varias leyes (según
+          jurisdicción)
+        </strong>
+        .
+      </li>
+
+      <li>
+        <code>forwarded</code>: Acumula los saltos entre proxies y CDNs entre el
+        cliente y el servidor. Con la intención de reemplazar{" "}
+        <code>X-Forwarded-*</code>. Su adopción es ambigua, pero es el{" "}
+        <strong>estándar oficial</strong>.
+      </li>
+
+      <li>
+        <code>sec-ch-ua*</code>: Versión moderna del <code>user-agent</code>,
+        separada en varias cabeceras. <strong>No es un estándar</strong>, por lo
+        que no todos los navegadores las envían.
+      </li>
+    </ul>
+  </LabDetails>
+
+  <LabDetails title="Qué revelan las pruebas DNS">
+    <p>
+      Estas pruebas revelan la <strong>IP, ASN, CIDR y organización</strong> de
+      los resolvers DNS de tu red. También se revelan las{" "}
+      <strong>filtraciones ECS</strong>, mostrando el resolver que envía la
+      subred, el rango enviado y la ubicación (país, región, ciudad) a la que
+      pertenece el rango.
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Cómo se ordenan los resultados DNS">
+    <p>
+      Los resultados son agrupados por <em>resolver conocido</em> (obtenido de
+      la lista oficial de{" "}
+      <a
+        href="https://quad9.net/ipranges/quad9-outbound-brief-latest.json"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Quad9
+      </a>{" "}
+      y los rangos de la red de Cloudflare{" "}
+      <a
+        href="https://www.cloudflare.com/ips-v4"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        IPv4
+      </a>
+      {" e "}
+      <a
+        href="https://www.cloudflare.com/ips-v6"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        IPv6
+      </a>
+      {")"} o por organización, en caso de que las IP no pertenezcan a las
+      listas conocidas.
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Quién ve estos datos">
+    <p>
+      Todas las peticiones al host principal de la instancia pública (
+      <code>diag.50512.dev</code>) se sirven a través de{" "}
+      <strong>Cloudflare CDN</strong>. Cloudflare ve tu IP, las rutas visitadas,
+      las cabeceras, el contenido de las respuestas y los trata según su{" "}
+      <a
+        href="https://www.cloudflare.com/privacypolicy/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        política de privacidad
+      </a>
+      . Las consultas a los <strong>hosts de IP dedicados</strong> {"("}
+      <code>ipv4.50512.dev</code> e <code>ipv6.50512.dev</code>) van directo a
+      nuestro servidor, sin pasar por terceros. El enriquecimiento se hace en
+      nuestro servidor, sin enviar tus datos a servicios externos. Las únicas
+      consultas a terceros, además de Cloudflare, son las de RDAP: las ejecuta
+      tu navegador hacia los <em>Registros Regionales de Internet (RIR)</em>,
+      que podrán ver tu IP.
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Registros en el servidor">
+    <p>
+      La instancia pública escribe los registros de acceso en RAM y no se
+      almacena ningún registro de acceso en disco. Estos registros son la{" "}
+      <strong>IP, ruta consultada y código de respuesta</strong> para la API y
+      la <strong>IP del resolver</strong> para el servidor de pruebas DNS. Los
+      resultados de la prueba DNS (IP de resolvers y rangos ECS) se descartan a
+      los 60 s, y su identificador no aparece en los registros. Estos registros
+      se revisan automáticamente y únicamente para seguridad del servicio.{" "}
+      <strong>
+        Se borran al reiniciar/actualizar el servicio o llegar a los ~20 MB por
+        servicio
+      </strong>
+      {". "}
+      <em>
+        Esto aplica para nuestro servidor. Los registros de Cloudflare se rigen
+        por su propia política
+      </em>
+      .
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Rastreo y cookies">
+    <p>Sin analíticas, cookies ni rastreadores propios o de terceros.</p>
+  </LabDetails>
+
+  <LabDetails title="Límites de uso">
+    <p>
+      La API tiene un límite de <strong>60 req/min por IP</strong> (al
+      superarlo, responde <code>429 Too Many Requests</code> con{" "}
+      <code>Retry-After</code>). Ten en cuenta que las consultas RDAP, que hace
+      tu navegador, pueden tener límites más estrictos, dependiendo del{" "}
+      <em>Registro Regional de Internet (RIR)</em> correspondiente. Puedes usar
+      la instancia pública para programas propios, pero pedimos amablemente
+      seguir el <em>Uso Justo</em> para no perjudicar el servicio. Si necesitas
+      un uso intensivo,{" "}
+      <a
+        href="https://github.com/50512/whoami-diagnostic"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        levanta tu propia instancia
+      </a>
+      .
+    </p>
+  </LabDetails>
+
+  <LabDetails title="Recomendaciones de Uso Justo">
+    <p>
+      Para mantener el servicio gratuito sin perjudicar a otros usuarios, damos
+      las siguientes recomendaciones:
+    </p>
+    <ul>
+      <li>No lanzar peticiones masivas en paralelo.</li>
+      <li>
+        Respetar el <code>Retry-After</code> después de superar el{" "}
+        <em>rate limit</em>.
+      </li>
+    </ul>
+  </LabDetails>
+</MainLayout>
+
+<style>
+  .title {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    h1 {
+      white-space: nowrap;
+      border: var(--border-soft);
+      background: var(--surface-1);
+      box-shadow: var(--shadow-label-orange);
+      width: fit-content;
+      padding: var(--space-1);
+      position: absolute;
+      top: -50px;
+    }
+  }
+
+  code {
+    background: var(--surface-2);
+    padding-inline: var(--space-1);
+  }
+
+  ul {
+    list-style-type: square;
+    color: var(--ink-2);
+  }
+</style>

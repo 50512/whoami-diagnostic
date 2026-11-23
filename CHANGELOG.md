@@ -4,11 +4,16 @@ Registro de los cambios efectuados y los cambios pendientes.
 
 ## Pendientes
 
-- [ ] Página de "Acerca de": Sección de privacidad y FAQ.
 - [ ] Página de docs: Endpoints disponibles, como usar, limitantes respecto a la GUI.
 - [ ] Descargar los resultados (json, md o pdf).
 
 ## Versiones
+
+### v0.24.0
+
+- Añadida la página `/about` con información de la página principal.
+- Añadido soporte para los `client-hints` de alta entropía.
+- Título de la página principal cambiado a `whoami diagnostic`
 
 ### v0.23.1
 
